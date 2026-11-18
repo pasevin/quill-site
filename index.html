@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quill — Markdown to your reMarkable, instantly</title>
+<meta name="description" content="A native macOS menu-bar app that sends markdown, articles, PDFs and EPUBs straight to your reMarkable tablet. No cloud detours, no conversion services.">
+<link rel="icon" type="image/png" href="assets/quill-icon.png">
+<link rel="apple-touch-icon" href="assets/quill-icon.png">
+<style>
+  :root {
+    --bg: #0d0f12;
+    --bg-raised: #14171c;
+    --bg-card: #171b21;
+    --ink: #e8e6e1;
+    --ink-dim: #9a968e;
+    --ink-faint: #6b675f;
+    --accent: #d4a24e;
+    --accent-soft: rgba(212, 162, 78, 0.12);
+    --line: #262b33;
+    --serif: "Iowan Old Style", "Palatino", Georgia, serif;
+    --sans: -apple-system, "SF Pro Text", "Inter", sans-serif;
+    --mono: "SF Mono", "JetBrains Mono", monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 17px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ---------- nav ---------- */
+  nav {
+    position: sticky; top: 0; z-index: 10;
+    display: flex; align-items: center; justify-content: space-between;
+    max-width: 1080px; margin: 0 auto; padding: 20px 24px;
+    backdrop-filter: blur(12px);
+    background: rgba(13, 15, 18, 0.8);
+    border-bottom: 1px solid var(--line);
+  }
+  .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--ink); }
+  .brand img { width: 26px; height: 26px; }
+  .brand span { font-family: var(--serif); font-size: 20px; letter-spacing: 0.5px; }
+  .nav-links { display: flex; gap: 28px; }
+  .nav-links a { color: var(--ink-dim); text-decoration: none; font-size: 14.5px; transition: color .15s; }
+  .nav-links a:hover { color: var(--accent); }
+
+  /* ---------- hero ---------- */
+  .hero { max-width: 1080px; margin: 0 auto; padding: 110px 24px 90px; text-align: center; }
+  .hero img { width: 88px; height: 88px; margin-bottom: 34px; }
+  .hero h1 {
+    font-family: var(--serif);
+    font-size: clamp(38px, 6vw, 58px);
+    font-weight: 500;
+    line-height: 1.15;
+    letter-spacing: -0.5px;
+    margin-bottom: 22px;
+  }
+  .hero h1 em { color: var(--accent); font-style: italic; }
+  .hero p.lede {
+    color: var(--ink-dim);
+    font-size: 20px;
+    max-width: 620px;
+    margin: 0 auto 40px;
+  }
+  .hero .cta-row { display: flex; gap: 14px; justify-content: center; align-items: center; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--mono); font-size: 12.5px; letter-spacing: 0.4px;
+    color: var(--ink-dim);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 8px 16px;
+    background: var(--bg-raised);
+  }
+  .badge .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+
+  /* ---------- sections ---------- */
+  section { max-width: 1080px; margin: 0 auto; padding: 80px 24px; }
+  .kicker {
+    font-family: var(--mono); font-size: 12.5px; letter-spacing: 2.5px;
+    text-transform: uppercase; color: var(--accent); margin-bottom: 14px;
+  }
+  h2 { font-family: var(--serif); font-size: 34px; font-weight: 500; margin-bottom: 14px; }
+  .section-lede { color: var(--ink-dim); max-width: 640px; margin-bottom: 48px; }
+
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 26px 24px;
+    transition: border-color .2s, transform .2s;
+  }
+  .card:hover { border-color: rgba(212, 162, 78, 0.4); transform: translateY(-2px); }
+  .card .glyph { font-size: 22px; margin-bottom: 14px; }
+  .card h3 { font-size: 16.5px; font-weight: 600; margin-bottom: 8px; }
+  .card p { color: var(--ink-dim); font-size: 14.5px; line-height: 1.6; }
+
+  /* ---------- flow ---------- */
+  .flow { display: flex; align-items: stretch; gap: 0; justify-content: center; flex-wrap: wrap; margin-top: 20px; }
+  .flow-step {
+    background: var(--bg-card); border: 1px solid var(--line);
+    border-radius: 12px; padding: 20px 22px; min-width: 200px; text-align: center;
+  }
+  .flow-step .n { font-family: var(--mono); color: var(--accent); font-size: 12px; letter-spacing: 1.5px; display: block; margin-bottom: 6px; }
+  .flow-step .t { font-weight: 600; font-size: 15.5px; }
+  .flow-step .d { color: var(--ink-dim); font-size: 13.5px; margin-top: 4px; }
+  .flow-arrow { display: flex; align-items: center; padding: 0 14px; color: var(--ink-faint); font-size: 20px; }
+
+  /* ---------- privacy ---------- */
+  .privacy {
+    background: var(--bg-raised);
+    border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+  }
+  .privacy .inner { max-width: 1080px; margin: 0 auto; padding: 80px 24px; }
+  .points { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 32px; margin-top: 40px; }
+  @media (max-width: 720px) { .points { grid-template-columns: 1fr; } }
+  .point { display: flex; gap: 12px; align-items: flex-start; }
+  .point .tick { color: var(--accent); font-size: 15px; margin-top: 3px; }
+  .point p { color: var(--ink-dim); font-size: 15px; }
+  .point strong { color: var(--ink); font-weight: 600; }
+
+  /* ---------- footer ---------- */
+  footer {
+    border-top: 1px solid var(--line);
+    padding: 40px 24px; text-align: center;
+    color: var(--ink-faint); font-size: 13.5px;
+  }
+  footer a { color: var(--ink-dim); text-decoration: none; }
+  footer a:hover { color: var(--accent); }
+  footer .sep { margin: 0 10px; color: var(--line); }
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="brand" href="#"><img src="assets/quill-icon.png" alt="Quill icon"><span>Quill</span></a>
+  <div class="nav-links">
+    <a href="#features">Features</a>
+    <a href="#how">How it works</a>
+    <a href="#privacy">Privacy</a>
+  </div>
+</nav>
+
+<header class="hero">
+  <img src="assets/quill-icon.png" alt="Quill">
+  <h1>From your Mac to your reMarkable,<br><em>before you've looked up.</em></h1>
+  <p class="lede">A native macOS menu-bar app that turns markdown into a native reMarkable notebook — with articles, PDFs and EPUBs alongside. Built locally, sent directly.</p>
+  <div class="cta-row">
+    <span class="badge"><span class="dot"></span> In development — public release soon</span>
+  </div>
+</header>
+
+<section id="features">
+  <div class="kicker">Features</div>
+  <h2>Everything reaches the tablet</h2>
+  <p class="section-lede">One tool for every way an idea arrives — a note you're writing, an article you're reading, a paper you've downloaded.</p>
+  <div class="grid">
+    <div class="card"><div class="glyph">✍️</div><h3>Markdown → native notebook</h3><p>Real typed text with headings, bullets and prose — not a screenshot. Edit and reorganize it on the tablet like anything else you've written.</p></div>
+    <div class="card"><div class="glyph">🔗</div><h3>URL → article</h3><p>Paste a link; Quill extracts the article and delivers it as a clean, readable notebook. Table paginated so it stays legible at tablet width.</p></div>
+    <div class="card"><div class="glyph">📄</div><h3>PDF &amp; EPUB, raw</h3><p>Documents upload as themselves — no conversion, no reflow, no fidelity loss. They open in the tablet viewer and on my.remarkable.com.</p></div>
+    <div class="card"><div class="glyph">♻️</div><h3>Update in place</h3><p>Re-push a note and the existing document updates — no duplicate pile-up. Deletes work the same clean way.</p></div>
+    <div class="card"><div class="glyph">📂</div><h3>Into the right folder</h3><p>Choose the destination folder per push from a live folder tree, or let the watched inbox folder file things for you.</p></div>
+    <div class="card"><div class="glyph">⌥⌘R</div><h3>One keystroke away</h3><p>A global hotkey pushes whatever's on your clipboard. A Finder Quick Action and a global hotkey push selected text from any app.</p></div>
+  </div>
+</section>
+
+<section id="how">
+  <div class="kicker">How it works</div>
+  <h2>Three steps, zero ceremony</h2>
+  <div class="flow">
+    <div class="flow-step"><span class="n">01</span><span class="t">Select or drop</span><span class="d">Clipboard, file, link or drop into the inbox folder</span></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step"><span class="n">02</span><span class="t">Quill prepares</span><span class="d">Markdown → v6 notebook · URL → article · PDF/EPUB → raw</span></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step"><span class="n">03</span><span class="t">It's on the tablet</span><span class="d">Syncs to your device; history tracks every push</span></div>
+  </div>
+</section>
+
+<section class="privacy" id="privacy">
+  <div class="inner">
+    <div class="kicker">Privacy</div>
+    <h2>Your words stay yours</h2>
+    <p class="section-lede">Quill was designed from the start so that nothing about your content passes through anyone else's servers.</p>
+    <div class="points">
+      <div class="point"><span class="tick">◆</span><p><strong>Local by construction.</strong> Documents are prepared and uploaded from your Mac, straight to your own reMarkable account. There is no Quill server in the path.</p></div>
+      <div class="point"><span class="tick">◆</span><p><strong>No account with us.</strong> Quill pairs with your reMarkable device once, using reMarkable's own pairing flow. We never see your credentials.</p></div>
+      <div class="point"><span class="tick">◆</span><p><strong>Works on free accounts.</strong> The cloud sync protocol is used directly — no Connect subscription required for any feature.</p></div>
+      <div class="point"><span class="tick">◆</span><p><strong>Open foundation.</strong> Built on the open-source reMarkable sync protocol work of the community.</p></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>
+    <a href="https://github.com/pasevin/quill">Source</a><span class="sep">·</span>
+    <a href="https://remarkable.com">reMarkable</a> is a trademark of Remarkable AS — Quill is an independent project, not affiliated with Remarkable AS
+  </p>
+</footer>
+
+</body>
+</html>
