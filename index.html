@@ -3,206 +3,1296 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Quill — Markdown to your reMarkable, instantly</title>
-<meta name="description" content="A native macOS menu-bar app that sends markdown, articles, PDFs and EPUBs straight to your reMarkable tablet. No cloud detours, no conversion services.">
+<title>Quill — Native macOS to reMarkable, without the friction</title>
+<meta name="description" content="Send Markdown as editable reMarkable notebooks, strip web articles for e-ink, and push raw PDFs & EPUBs from macOS. Updates in place. Works on free reMarkable accounts.">
 <link rel="icon" type="image/png" href="assets/quill-icon.png">
 <link rel="apple-touch-icon" href="assets/quill-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0d0f12;
-    --bg-raised: #14171c;
-    --bg-card: #171b21;
-    --ink: #e8e6e1;
-    --ink-dim: #9a968e;
-    --ink-faint: #6b675f;
-    --accent: #d4a24e;
-    --accent-soft: rgba(212, 162, 78, 0.12);
-    --line: #262b33;
-    --serif: "Iowan Old Style", "Palatino", Georgia, serif;
-    --sans: -apple-system, "SF Pro Text", "Inter", sans-serif;
-    --mono: "SF Mono", "JetBrains Mono", monospace;
+    /* Tactile e-ink paper & graphite palette */
+    --paper: #F6F4EE;
+    --paper-deep: #ECE8DF;
+    --paper-card: #FBF9F5;
+    --paper-white: #FFFFFF;
+    --ink: #171715;
+    --ink-soft: #4A4843;
+    --ink-muted: #78756E;
+    --rule: #DCD7CC;
+    --rule-strong: #C8C1B4;
+    --accent: #B8422B;       /* Paper Pro terracotta marker */
+    --accent-soft: #F4E3DE;
+    --cobalt: #23509E;       /* Paper Pro blue ink */
+    --cobalt-soft: #E4ECF8;
+    --sage: #2D6A4F;         /* Sync/verified green */
+    --sage-soft: #E2EFE8;
+
+    --serif: "Newsreader", "Iowan Old Style", Georgia, serif;
+    --sans: "DM Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+    --mono: "JetBrains Mono", "SF Mono", ui-monospace, monospace;
+
+    --radius-sm: 6px;
+    --radius-md: 12px;
+    --radius-lg: 18px;
+    --max: 1120px;
   }
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  html { scroll-behavior: smooth; }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; background: var(--paper); color: var(--ink); }
   body {
-    background: var(--bg);
-    color: var(--ink);
     font-family: var(--sans);
-    font-size: 17px;
-    line-height: 1.65;
+    font-size: 16px;
+    line-height: 1.6;
+    color: var(--ink);
+    background: var(--paper);
     -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
   }
 
-  /* ---------- nav ---------- */
-  nav {
-    position: sticky; top: 0; z-index: 10;
-    display: flex; align-items: center; justify-content: space-between;
-    max-width: 1080px; margin: 0 auto; padding: 20px 24px;
-    backdrop-filter: blur(12px);
-    background: rgba(13, 15, 18, 0.8);
-    border-bottom: 1px solid var(--line);
+  /* Subtle paper grain texture via inline SVG noise */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 999;
+    opacity: 0.025;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   }
-  .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--ink); }
-  .brand img { width: 26px; height: 26px; }
-  .brand span { font-family: var(--serif); font-size: 20px; letter-spacing: 0.5px; }
-  .nav-links { display: flex; gap: 28px; }
-  .nav-links a { color: var(--ink-dim); text-decoration: none; font-size: 14.5px; transition: color .15s; }
-  .nav-links a:hover { color: var(--accent); }
 
-  /* ---------- hero ---------- */
-  .hero { max-width: 1080px; margin: 0 auto; padding: 110px 24px 90px; text-align: center; }
-  .hero img { width: 88px; height: 88px; margin-bottom: 34px; }
-  .hero h1 {
+  .wrap { max-width: var(--max); margin: 0 auto; padding: 0 28px; }
+
+  /* ── Navigation ─────────────────────────────────────────────────── */
+  header.nav {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: rgba(246, 244, 238, 0.88);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--rule);
+  }
+  .nav-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+  }
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    color: var(--ink);
+  }
+  .brand-mark {
+    width: 28px;
+    height: 28px;
+    border-radius: 7px;
+    background: var(--ink);
+    color: var(--paper);
+    display: grid;
+    place-items: center;
+  }
+  .brand-name {
     font-family: var(--serif);
-    font-size: clamp(38px, 6vw, 58px);
+    font-size: 21px;
     font-weight: 500;
-    line-height: 1.15;
-    letter-spacing: -0.5px;
+    letter-spacing: -0.01em;
+  }
+  .nav-links {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+  }
+  .nav-links a {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--ink-soft);
+    text-decoration: none;
+    transition: color 0.15s ease;
+  }
+  .nav-links a:hover { color: var(--ink); }
+  .nav-status {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink-soft);
+    background: var(--paper-deep);
+    border: 1px solid var(--rule);
+    padding: 5px 11px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .nav-status::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  /* ── Hero (Asymmetric editorial split) ──────────────────────────── */
+  .hero {
+    padding: 72px 0 84px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .hero-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.02fr) minmax(0, 1.08fr);
+    gap: 56px;
+    align-items: center;
+  }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .eyebrow::before {
+    content: "";
+    width: 22px;
+    height: 1px;
+    background: var(--accent);
+  }
+  h1 {
+    font-family: var(--serif);
+    font-size: clamp(40px, 4.8vw, 58px);
+    font-weight: 400;
+    line-height: 1.08;
+    letter-spacing: -0.025em;
+    color: var(--ink);
+    text-wrap: balance;
     margin-bottom: 22px;
   }
-  .hero h1 em { color: var(--accent); font-style: italic; }
-  .hero p.lede {
-    color: var(--ink-dim);
-    font-size: 20px;
-    max-width: 620px;
-    margin: 0 auto 40px;
+  h1 em {
+    font-style: italic;
+    color: var(--accent);
   }
-  .hero .cta-row { display: flex; gap: 14px; justify-content: center; align-items: center; }
-  .badge {
-    display: inline-flex; align-items: center; gap: 8px;
-    font-family: var(--mono); font-size: 12.5px; letter-spacing: 0.4px;
-    color: var(--ink-dim);
-    border: 1px solid var(--line);
-    border-radius: 999px;
-    padding: 8px 16px;
-    background: var(--bg-raised);
+  .hero-lead {
+    font-size: 17.5px;
+    line-height: 1.65;
+    color: var(--ink-soft);
+    max-width: 470px;
+    margin-bottom: 32px;
+    text-wrap: pretty;
   }
-  .badge .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+  .hero-facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 18px;
+    padding-top: 22px;
+    border-top: 1px solid var(--rule);
+    margin-bottom: 28px;
+  }
+  .fact {
+    font-size: 13.5px;
+    color: var(--ink-soft);
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .fact svg { color: var(--ink); flex-shrink: 0; }
+  .hero-meta {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .pill-release {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    color: var(--ink);
+    background: var(--paper-card);
+    border: 1px solid var(--rule-strong);
+    padding: 9px 15px;
+    border-radius: var(--radius-sm);
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+  }
+  .pill-release .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+  .kbd-hint {
+    font-size: 13px;
+    color: var(--ink-muted);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  kbd {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink);
+    background: var(--paper-white);
+    border: 1px solid var(--rule-strong);
+    border-bottom-width: 2px;
+    border-radius: 5px;
+    padding: 2px 7px;
+  }
 
-  /* ---------- sections ---------- */
-  section { max-width: 1080px; margin: 0 auto; padding: 80px 24px; }
-  .kicker {
-    font-family: var(--mono); font-size: 12.5px; letter-spacing: 2.5px;
-    text-transform: uppercase; color: var(--accent); margin-bottom: 14px;
+  /* Hero Illustration Frame */
+  .hero-art {
+    background: var(--paper-card);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-lg);
+    padding: 22px;
+    box-shadow: 0 18px 40px -24px rgba(23, 23, 21, 0.16), 0 1px 2px rgba(23, 23, 21, 0.05);
   }
-  h2 { font-family: var(--serif); font-size: 34px; font-weight: 500; margin-bottom: 14px; }
-  .section-lede { color: var(--ink-dim); max-width: 640px; margin-bottom: 48px; }
+  .hero-art svg { width: 100%; height: auto; display: block; }
 
-  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
-  @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
-  .card {
-    background: var(--bg-card);
-    border: 1px solid var(--line);
-    border-radius: 14px;
-    padding: 26px 24px;
-    transition: border-color .2s, transform .2s;
+  /* ── Section Shared ─────────────────────────────────────────────── */
+  section.block {
+    padding: 88px 0;
+    border-bottom: 1px solid var(--rule);
   }
-  .card:hover { border-color: rgba(212, 162, 78, 0.4); transform: translateY(-2px); }
-  .card .glyph { font-size: 22px; margin-bottom: 14px; }
-  .card h3 { font-size: 16.5px; font-weight: 600; margin-bottom: 8px; }
-  .card p { color: var(--ink-dim); font-size: 14.5px; line-height: 1.6; }
-
-  /* ---------- flow ---------- */
-  .flow { display: flex; align-items: stretch; gap: 0; justify-content: center; flex-wrap: wrap; margin-top: 20px; }
-  .flow-step {
-    background: var(--bg-card); border: 1px solid var(--line);
-    border-radius: 12px; padding: 20px 22px; min-width: 200px; text-align: center;
+  .section-head {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 40px;
+    align-items: end;
+    margin-bottom: 48px;
   }
-  .flow-step .n { font-family: var(--mono); color: var(--accent); font-size: 12px; letter-spacing: 1.5px; display: block; margin-bottom: 6px; }
-  .flow-step .t { font-weight: 600; font-size: 15.5px; }
-  .flow-step .d { color: var(--ink-dim); font-size: 13.5px; margin-top: 4px; }
-  .flow-arrow { display: flex; align-items: center; padding: 0 14px; color: var(--ink-faint); font-size: 20px; }
-
-  /* ---------- privacy ---------- */
-  .privacy {
-    background: var(--bg-raised);
-    border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+  h2 {
+    font-family: var(--serif);
+    font-size: clamp(30px, 3.4vw, 42px);
+    font-weight: 400;
+    line-height: 1.14;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+    text-wrap: balance;
   }
-  .privacy .inner { max-width: 1080px; margin: 0 auto; padding: 80px 24px; }
-  .points { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 32px; margin-top: 40px; }
-  @media (max-width: 720px) { .points { grid-template-columns: 1fr; } }
-  .point { display: flex; gap: 12px; align-items: flex-start; }
-  .point .tick { color: var(--accent); font-size: 15px; margin-top: 3px; }
-  .point p { color: var(--ink-dim); font-size: 15px; }
-  .point strong { color: var(--ink); font-weight: 600; }
+  .section-desc {
+    font-size: 16px;
+    color: var(--ink-soft);
+    max-width: 480px;
+    text-wrap: pretty;
+  }
 
-  /* ---------- footer ---------- */
+  /* ── Problem vs Solution (Comparison) ───────────────────────────── */
+  .compare-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+  .compare-col {
+    background: var(--paper-card);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-lg);
+    padding: 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+  }
+  .compare-col.after {
+    background: var(--paper-white);
+    border-color: var(--rule-strong);
+    box-shadow: 0 12px 30px -20px rgba(23, 23, 21, 0.12);
+  }
+  .compare-tag {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    width: fit-content;
+    padding: 4px 10px;
+    border-radius: 4px;
+  }
+  .compare-col.before .compare-tag {
+    color: var(--ink-muted);
+    background: var(--paper-deep);
+  }
+  .compare-col.after .compare-tag {
+    color: var(--accent);
+    background: var(--accent-soft);
+  }
+  .compare-art {
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-md);
+    padding: 16px;
+  }
+  .compare-art svg { width: 100%; height: auto; display: block; }
+  .compare-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .compare-list li {
+    display: grid;
+    grid-template-columns: 18px 1fr;
+    gap: 10px;
+    font-size: 14.5px;
+    line-height: 1.5;
+    color: var(--ink-soft);
+  }
+  .compare-list strong { color: var(--ink); font-weight: 600; }
+  .mark-x { color: var(--ink-muted); font-family: var(--mono); font-weight: 500; }
+  .mark-ok { color: var(--accent); font-family: var(--mono); font-weight: 600; }
+
+  /* ── Interactive Pipeline ("One input, the right output") ───────── */
+  .pipeline-shell {
+    background: var(--paper-white);
+    border: 1px solid var(--rule-strong);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: 0 16px 36px -24px rgba(23, 23, 21, 0.14);
+  }
+  .pipeline-tabs {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    border-bottom: 1px solid var(--rule);
+    background: var(--paper-card);
+  }
+  .pipe-tab {
+    appearance: none;
+    background: transparent;
+    border: none;
+    border-right: 1px solid var(--rule);
+    padding: 18px 20px;
+    text-align: left;
+    cursor: pointer;
+    font-family: var(--sans);
+    transition: background 0.15s ease;
+    position: relative;
+  }
+  .pipe-tab:last-child { border-right: none; }
+  .pipe-tab:hover { background: var(--paper-deep); }
+  .pipe-tab[aria-selected="true"] {
+    background: var(--paper-white);
+  }
+  .pipe-tab[aria-selected="true"]::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -1px;
+    height: 2px;
+    background: var(--accent);
+  }
+  .pipe-tab .ext {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--accent);
+    display: block;
+    margin-bottom: 4px;
+  }
+  .pipe-tab .label {
+    font-size: 14.5px;
+    font-weight: 600;
+    color: var(--ink);
+    display: block;
+  }
+  .pipeline-stage {
+    padding: 36px 32px;
+    display: grid;
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.85fr);
+    gap: 36px;
+    align-items: center;
+  }
+  .stage-visual {
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-md);
+    padding: 20px;
+  }
+  .stage-visual svg { width: 100%; height: auto; display: block; }
+  .stage-copy h3 {
+    font-family: var(--serif);
+    font-size: 28px;
+    font-weight: 400;
+    line-height: 1.2;
+    margin-bottom: 14px;
+    color: var(--ink);
+  }
+  .stage-copy p {
+    font-size: 15px;
+    color: var(--ink-soft);
+    margin-bottom: 20px;
+    line-height: 1.65;
+  }
+  .stage-specs {
+    list-style: none;
+    border-top: 1px solid var(--rule);
+    padding-top: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .stage-specs li {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    font-size: 13.5px;
+    padding-bottom: 8px;
+    border-bottom: 1px dashed var(--rule);
+  }
+  .stage-specs li:last-child { border-bottom: none; padding-bottom: 0; }
+  .stage-specs .k { color: var(--ink-muted); font-family: var(--mono); font-size: 12px; }
+  .stage-specs .v { color: var(--ink); font-weight: 500; text-align: right; }
+
+  /* ── Four Entry Points (Ruled Index Layout, NOT icon cards) ─────── */
+  .entry-list {
+    border-top: 1px solid var(--rule-strong);
+  }
+  .entry-row {
+    display: grid;
+    grid-template-columns: 72px minmax(0, 240px) minmax(0, 1fr) minmax(0, 220px);
+    gap: 24px;
+    align-items: center;
+    padding: 26px 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .entry-num {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    color: var(--ink-muted);
+  }
+  .entry-title {
+    font-family: var(--serif);
+    font-size: 23px;
+    font-weight: 400;
+    color: var(--ink);
+  }
+  .entry-desc {
+    font-size: 15px;
+    color: var(--ink-soft);
+    text-wrap: pretty;
+  }
+  .entry-trigger {
+    justify-self: end;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    color: var(--ink);
+    background: var(--paper-card);
+    border: 1px solid var(--rule);
+    padding: 6px 12px;
+    border-radius: var(--radius-sm);
+    white-space: nowrap;
+  }
+
+  /* ── Architecture & Privacy ─────────────────────────────────────── */
+  .arch-block {
+    background: var(--paper-deep);
+    padding: 88px 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .arch-diagram {
+    background: var(--paper-white);
+    border: 1px solid var(--rule-strong);
+    border-radius: var(--radius-lg);
+    padding: 28px;
+    margin-bottom: 36px;
+  }
+  .arch-diagram svg { width: 100%; height: auto; display: block; }
+  .truths {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 28px;
+  }
+  .truth {
+    border-top: 2px solid var(--ink);
+    padding-top: 16px;
+  }
+  .truth h3 {
+    font-size: 15.5px;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 8px;
+  }
+  .truth p {
+    font-size: 14.5px;
+    color: var(--ink-soft);
+    line-height: 1.6;
+  }
+
+  /* ── Honest Limits & Footer ─────────────────────────────────────── */
+  .limits-band {
+    padding: 64px 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .limits-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.4fr);
+    gap: 48px;
+    align-items: start;
+  }
+  .limits-grid h3 {
+    font-family: var(--serif);
+    font-size: 26px;
+    font-weight: 400;
+    margin-bottom: 10px;
+  }
+  .limits-grid > div:first-child p {
+    font-size: 14.5px;
+    color: var(--ink-muted);
+  }
+  .limits-cols {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px 32px;
+  }
+  .limit-item {
+    font-size: 14px;
+    color: var(--ink-soft);
+    line-height: 1.55;
+  }
+  .limit-item strong {
+    display: block;
+    color: var(--ink);
+    font-weight: 600;
+    margin-bottom: 2px;
+  }
+
   footer {
-    border-top: 1px solid var(--line);
-    padding: 40px 24px; text-align: center;
-    color: var(--ink-faint); font-size: 13.5px;
+    padding: 36px 0 48px;
+    font-size: 13.5px;
+    color: var(--ink-muted);
   }
-  footer a { color: var(--ink-dim); text-decoration: none; }
-  footer a:hover { color: var(--accent); }
-  footer .sep { margin: 0 10px; color: var(--line); }
+  .foot-inner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+  footer a {
+    color: var(--ink-soft);
+    text-decoration: none;
+    border-bottom: 1px solid var(--rule-strong);
+  }
+  footer a:hover { color: var(--ink); border-color: var(--ink); }
+
+  /* ── Focus & Motion ─────────────────────────────────────────────── */
+  a:focus-visible, button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    * { transition: none !important; animation: none !important; }
+  }
+
+  /* ── Responsive ─────────────────────────────────────────────────── */
+  @media (max-width: 960px) {
+    .hero-grid, .section-head, .compare-grid, .pipeline-stage, .limits-grid {
+      grid-template-columns: 1fr;
+      gap: 32px;
+    }
+    .pipeline-tabs { grid-template-columns: 1fr 1fr; }
+    .pipe-tab { border-bottom: 1px solid var(--rule); }
+    .entry-row {
+      grid-template-columns: 44px 1fr;
+      gap: 10px 16px;
+    }
+    .entry-desc { grid-column: 2; }
+    .entry-trigger { grid-column: 2; justify-self: start; margin-top: 6px; }
+    .truths { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 640px) {
+    .wrap { padding: 0 18px; }
+    .nav-links { display: none; }
+    .hero { padding: 48px 0 56px; }
+    section.block, .arch-block { padding: 56px 0; }
+    .pipeline-stage { padding: 20px; }
+    .limits-cols { grid-template-columns: 1fr; }
+  }
 </style>
 </head>
 <body>
 
-<nav>
-  <a class="brand" href="#"><img src="assets/quill-icon.png" alt="Quill icon"><span>Quill</span></a>
-  <div class="nav-links">
-    <a href="#features">Features</a>
-    <a href="#how">How it works</a>
-    <a href="#privacy">Privacy</a>
-  </div>
-</nav>
+<header class="nav">
+  <div class="wrap nav-inner">
+    <a class="brand" href="#">
+      <span class="brand-mark" aria-hidden="true">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M15.807.531c-.174-.177-.41-.289-.64-.363a3.765 3.765 0 0 0-.833-.15c-.62-.049-1.394 0-2.252.175C10.365.545 8.264 1.415 6.315 3.1c-1.95 1.686-3.168 3.724-3.758 5.423-.294.847-.44 1.634-.429 2.268.005.316.05.62.154.88q.025.061.056.122A68 68 0 0 0 .08 15.198a.528.528 0 0 0 .157.72.504.504 0 0 0 .705-.16 67.6 67.6 0 0 1 2.158-3.26c.285.141.616.195.958.182.513-.02 1.098-.188 1.723-.49 1.25-.605 2.744-1.787 4.303-3.642l1.518-1.55a.53.53 0 0 0 0-.739l-.729-.744 1.311.209a.5.5 0 0 0 .443-.15l.663-.684c.663-.68 1.292-1.325 1.763-1.892.314-.378.585-.752.754-1.107.163-.345.278-.773.112-1.188a.5.5 0 0 0-.112-.172M3.733 11.62C5.385 9.374 7.24 7.215 9.309 5.394l1.21 1.234-1.171 1.196-.027.03c-1.5 1.789-2.891 2.867-3.977 3.393-.544.263-.99.378-1.324.39a1.3 1.3 0 0 1-.287-.018Zm6.769-7.22c1.31-1.028 2.7-1.914 4.172-2.6a7 7 0 0 1-.4.523c-.442.533-1.028 1.134-1.681 1.804l-.51.524zm3.346-3.357C9.594 3.147 6.045 6.8 3.149 10.678c.007-.464.121-1.086.37-1.806.533-1.535 1.65-3.415 3.455-4.976 1.807-1.561 3.746-2.36 5.31-2.68a8 8 0 0 1 1.564-.173"/>
+        </svg>
+      </span>
+      <span class="brand-name">Quill</span>
+    </a>
 
-<header class="hero">
-  <img src="assets/quill-icon.png" alt="Quill">
-  <h1>From your Mac to your reMarkable,<br><em>before you've looked up.</em></h1>
-  <p class="lede">A native macOS menu-bar app that turns markdown into a native reMarkable notebook — with articles, PDFs and EPUBs alongside. Built locally, sent directly.</p>
-  <div class="cta-row">
-    <span class="badge"><span class="dot"></span> In development — public release soon</span>
+    <nav class="nav-links" aria-label="Primary">
+      <a href="#problem">The problem</a>
+      <a href="#pipeline">Formats</a>
+      <a href="#workflow">Workflow</a>
+      <a href="#privacy">Architecture</a>
+    </nav>
+
+    <span class="nav-status">macOS · In development</span>
   </div>
 </header>
 
-<section id="features">
-  <div class="kicker">Features</div>
-  <h2>Everything reaches the tablet</h2>
-  <p class="section-lede">One tool for every way an idea arrives — a note you're writing, an article you're reading, a paper you've downloaded.</p>
-  <div class="grid">
-    <div class="card"><div class="glyph">✍️</div><h3>Markdown → native notebook</h3><p>Real typed text with headings, bullets and prose — not a screenshot. Edit and reorganize it on the tablet like anything else you've written.</p></div>
-    <div class="card"><div class="glyph">🔗</div><h3>URL → article</h3><p>Paste a link; Quill extracts the article and delivers it as a clean, readable notebook. Table paginated so it stays legible at tablet width.</p></div>
-    <div class="card"><div class="glyph">📄</div><h3>PDF &amp; EPUB, raw</h3><p>Documents upload as themselves — no conversion, no reflow, no fidelity loss. They open in the tablet viewer and on my.remarkable.com.</p></div>
-    <div class="card"><div class="glyph">♻️</div><h3>Update in place</h3><p>Re-push a note and the existing document updates — no duplicate pile-up. Deletes work the same clean way.</p></div>
-    <div class="card"><div class="glyph">📂</div><h3>Into the right folder</h3><p>Choose the destination folder per push from a live folder tree, or let the watched inbox folder file things for you.</p></div>
-    <div class="card"><div class="glyph">⌥⌘R</div><h3>One keystroke away</h3><p>A global hotkey pushes whatever's on your clipboard. A Finder Quick Action and a global hotkey push selected text from any app.</p></div>
-  </div>
-</section>
+<main>
 
-<section id="how">
-  <div class="kicker">How it works</div>
-  <h2>Three steps, zero ceremony</h2>
-  <div class="flow">
-    <div class="flow-step"><span class="n">01</span><span class="t">Select or drop</span><span class="d">Clipboard, file, link or drop into the inbox folder</span></div>
-    <div class="flow-arrow">→</div>
-    <div class="flow-step"><span class="n">02</span><span class="t">Quill prepares</span><span class="d">Markdown → v6 notebook · URL → article · PDF/EPUB → raw</span></div>
-    <div class="flow-arrow">→</div>
-    <div class="flow-step"><span class="n">03</span><span class="t">It's on the tablet</span><span class="d">Syncs to your device; history tracks every push</span></div>
-  </div>
-</section>
+  <!-- ── HERO ──────────────────────────────────────────────────────── -->
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <div class="eyebrow">macOS Menu-Bar App for reMarkable</div>
+        <h1>Send Markdown to your reMarkable as <em>real, editable notebooks.</em></h1>
+        <p class="hero-lead">
+          Stop exporting frozen PDFs and piling up duplicate drafts. Quill lives in your Mac menu bar and turns Markdown, web articles, PDFs, and EPUBs into clean reMarkable documents — synced directly to your account, no Connect subscription required.
+        </p>
 
-<section class="privacy" id="privacy">
-  <div class="inner">
-    <div class="kicker">Privacy</div>
-    <h2>Your words stay yours</h2>
-    <p class="section-lede">Quill was designed from the start so that nothing about your content passes through anyone else's servers.</p>
-    <div class="points">
-      <div class="point"><span class="tick">◆</span><p><strong>Local by construction.</strong> Documents are prepared and uploaded from your Mac, straight to your own reMarkable account. There is no Quill server in the path.</p></div>
-      <div class="point"><span class="tick">◆</span><p><strong>No account with us.</strong> Quill pairs with your reMarkable device once, using reMarkable's own pairing flow. We never see your credentials.</p></div>
-      <div class="point"><span class="tick">◆</span><p><strong>Works on free accounts.</strong> The cloud sync protocol is used directly — no Connect subscription required for any feature.</p></div>
-      <div class="point"><span class="tick">◆</span><p><strong>Open foundation.</strong> Built on the open-source reMarkable sync protocol work of the community.</p></div>
+        <div class="hero-facts">
+          <span class="fact">
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 8.5l3 3 7-7"/></svg>
+            Native v6 typed text
+          </span>
+          <span class="fact">
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 8.5l3 3 7-7"/></svg>
+            Updates in place
+          </span>
+          <span class="fact">
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 8.5l3 3 7-7"/></svg>
+            Works on free accounts
+          </span>
+          <span class="fact">
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 8.5l3 3 7-7"/></svg>
+            Zero cloud middleman
+          </span>
+        </div>
+
+        <div class="hero-meta">
+          <span class="pill-release"><span class="dot"></span> Public release coming soon</span>
+          <span class="kbd-hint">Push clipboard anytime with <kbd>⌥⌘R</kbd></span>
+        </div>
+      </div>
+
+      <!-- Bespoke Product Illustration: macOS Menu Bar Popover → reMarkable Paper Pro -->
+      <div class="hero-art" aria-label="Illustration showing Quill in the macOS menu bar syncing a Markdown note directly into an editable reMarkable notebook">
+        <svg viewBox="0 0 560 410" fill="none" xmlns="http://www.w3.org/2000/svg" role="img">
+          <defs>
+            <pattern id="dotgrid" width="16" height="16" patternUnits="userSpaceOnUse">
+              <circle cx="1.5" cy="1.5" r="0.8" fill="#D5CFC3"/>
+            </pattern>
+            <filter id="softshadow" x="-10%" y="-10%" width="125%" height="125%">
+              <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#171715" flood-opacity="0.09"/>
+            </filter>
+          </defs>
+
+          <!-- Paper dot-grid backdrop -->
+          <rect x="0" y="0" width="560" height="410" rx="10" fill="#F4F1EA"/>
+          <rect x="0" y="0" width="560" height="410" rx="10" fill="url(#dotgrid)"/>
+
+          <!-- Top macOS Menu Bar Strip -->
+          <rect x="16" y="16" width="236" height="26" rx="6" fill="#FFFFFF" stroke="#D8D2C5"/>
+          <circle cx="30" cy="29" r="3.5" fill="#D8D2C5"/>
+          <circle cx="42" cy="29" r="3.5" fill="#D8D2C5"/>
+          <circle cx="54" cy="29" r="3.5" fill="#D8D2C5"/>
+          <text x="150" y="33" font-family="JetBrains Mono, monospace" font-size="9.5" fill="#78756E">10:42</text>
+          <!-- Highlighted Quill Menu Bar Icon -->
+          <rect x="196" y="19" width="46" height="20" rx="4" fill="#171715"/>
+          <path d="M225 23.5c-2.5.4-5.2 2-7.1 4.1l-2.4 3.4.9.6 2-2.7c1.4-.3 3-1.4 4.4-3l2.2-2.4z" fill="#F6F4EE"/>
+
+          <!-- macOS Menu Popover -->
+          <g filter="url(#softshadow)">
+            <rect x="24" y="50" width="224" height="252" rx="10" fill="#FFFFFF" stroke="#CFC8BA"/>
+            <!-- Menu Item 1: Active -->
+            <rect x="32" y="60" width="208" height="30" rx="6" fill="#F4E3DE"/>
+            <text x="44" y="79" font-family="DM Sans, sans-serif" font-size="11.5" font-weight="600" fill="#171715">Send Clipboard</text>
+            <text x="200" y="79" font-family="JetBrains Mono, monospace" font-size="10.5" fill="#B8422B">⌥⌘R</text>
+
+            <!-- Menu Item 2 -->
+            <text x="44" y="111" font-family="DM Sans, sans-serif" font-size="11.5" fill="#4A4843">Send File… (.md, .pdf, .epub)</text>
+            <line x1="34" y1="124" x2="238" y2="124" stroke="#ECE8DF"/>
+
+            <!-- Folder Destination Tree -->
+            <text x="44" y="142" font-family="JetBrains Mono, monospace" font-size="9.5" fill="#78756E">DESTINATION</text>
+            <rect x="36" y="150" width="200" height="24" rx="5" fill="#F6F4EE"/>
+            <text x="46" y="166" font-family="DM Sans, sans-serif" font-size="11" font-weight="500" fill="#171715">▸  Architecture / Specs</text>
+            <circle cx="222" cy="162" r="3.5" fill="#2D6A4F"/>
+
+            <line x1="34" y1="184" x2="238" y2="184" stroke="#ECE8DF"/>
+
+            <!-- Recent Push History -->
+            <text x="44" y="202" font-family="JetBrains Mono, monospace" font-size="9.5" fill="#78756E">RECENT PUSHES</text>
+
+            <text x="44" y="224" font-family="DM Sans, sans-serif" font-size="11" font-weight="500" fill="#171715">Q4 Architecture RFC</text>
+            <text x="192" y="224" font-family="JetBrains Mono, monospace" font-size="9.5" fill="#2D6A4F">updated</text>
+
+            <text x="44" y="246" font-family="DM Sans, sans-serif" font-size="11" fill="#4A4843">Sync v3 Protocol Notes</text>
+            <text x="208" y="246" font-family="JetBrains Mono, monospace" font-size="9.5" fill="#78756E">.md</text>
+
+            <text x="44" y="268" font-family="DM Sans, sans-serif" font-size="11" fill="#4A4843">Paper Pro Spec Sheet</text>
+            <text x="204" y="268" font-family="JetBrains Mono, monospace" font-size="9.5" fill="#78756E">.pdf</text>
+
+            <line x1="34" y1="280" x2="238" y2="280" stroke="#ECE8DF"/>
+            <text x="44" y="294" font-family="JetBrains Mono, monospace" font-size="9.5" fill="#78756E">~/Quill Inbox · watching</text>
+          </g>
+
+          <!-- Sync Connector Flow Line -->
+          <path d="M248 162 C278 162, 272 162, 302 162" stroke="#B8422B" stroke-width="1.75" stroke-dasharray="4 3"/>
+          <polygon points="302,158 310,162 302,166" fill="#B8422B"/>
+          <rect x="255" y="136" width="46" height="18" rx="4" fill="#FBF9F5" stroke="#DCD7CC"/>
+          <text x="261" y="148" font-family="JetBrains Mono, monospace" font-size="8.5" fill="#B8422B">sync v3</text>
+
+          <!-- reMarkable Paper Pro Tablet Frame -->
+          <g filter="url(#softshadow)">
+            <!-- Aluminum bezel -->
+            <rect x="312" y="34" width="228" height="342" rx="14" fill="#2A2927" stroke="#171715" stroke-width="1.5"/>
+            <!-- E-ink canvas screen -->
+            <rect x="324" y="46" width="204" height="304" rx="4" fill="#FBF9F4"/>
+            <!-- Bottom chin dot -->
+            <rect x="412" y="361" width="28" height="3" rx="1.5" fill="#4A4843"/>
+
+            <!-- Tablet Top Status Bar -->
+            <text x="336" y="62" font-family="JetBrains Mono, monospace" font-size="8" fill="#78756E">Architecture / Specs</text>
+            <text x="488" y="62" font-family="JetBrains Mono, monospace" font-size="8" fill="#2D6A4F">v6 text</text>
+            <line x1="336" y1="70" x2="516" y2="70" stroke="#E6E1D6"/>
+
+            <!-- Native Typed Document Inside Tablet -->
+            <text x="336" y="96" font-family="Newsreader, Georgia, serif" font-size="17" font-weight="500" fill="#171715">Q4 Architecture RFC</text>
+            <!-- Subtle marker underline -->
+            <path d="M336 102 Q390 100 448 103" stroke="#B8422B" stroke-width="2" stroke-linecap="round" opacity="0.75"/>
+
+            <!-- Editable typed prose lines -->
+            <text x="336" y="122" font-family="DM Sans, sans-serif" font-size="9.5" fill="#3D3B37">Moving uploads directly to the</text>
+            <text x="336" y="135" font-family="DM Sans, sans-serif" font-size="9.5" fill="#3D3B37">sync v3 hash tree removes the</text>
+            <text x="336" y="148" font-family="DM Sans, sans-serif" font-size="9.5" fill="#3D3B37">Connect dependency entirely.</text>
+
+            <!-- Bullet list -->
+            <circle cx="341" cy="166" r="1.8" fill="#171715"/>
+            <text x="349" y="169" font-family="DM Sans, sans-serif" font-size="9.2" fill="#3D3B37">Zero duplicate drafts on re-push</text>
+            <circle cx="341" cy="182" r="1.8" fill="#171715"/>
+            <text x="349" y="185" font-family="DM Sans, sans-serif" font-size="9.2" fill="#3D3B37">Tables rasterized &amp; paginated</text>
+
+            <!-- Clean Paginated Table inside Tablet -->
+            <rect x="336" y="200" width="180" height="72" rx="3" fill="#F4F1EA" stroke="#D8D2C5"/>
+            <line x1="336" y1="220" x2="516" y2="220" stroke="#D8D2C5"/>
+            <line x1="336" y1="246" x2="516" y2="246" stroke="#E6E1D6"/>
+            <line x1="422" y1="200" x2="422" y2="272" stroke="#E6E1D6"/>
+            <text x="344" y="213" font-family="JetBrains Mono, monospace" font-size="8" font-weight="500" fill="#171715">Format</text>
+            <text x="430" y="213" font-family="JetBrains Mono, monospace" font-size="8" font-weight="500" fill="#171715">Output</text>
+            <text x="344" y="236" font-family="JetBrains Mono, monospace" font-size="8" fill="#4A4843">.md / .txt</text>
+            <text x="430" y="236" font-family="DM Sans, sans-serif" font-size="8.5" fill="#171715">v6 notebook</text>
+            <text x="344" y="261" font-family="JetBrains Mono, monospace" font-size="8" fill="#4A4843">.pdf / .epub</text>
+            <text x="430" y="261" font-family="DM Sans, sans-serif" font-size="8.5" fill="#171715">raw cPages</text>
+
+            <!-- Handwritten cobalt stylus margin note -->
+            <path d="M338 296 C348 290, 355 304, 366 294 C374 287, 384 301, 396 293 C408 286, 418 297, 434 292" stroke="#23509E" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+            <text x="338" y="316" font-family="Newsreader, Georgia, serif" font-style="italic" font-size="10.5" fill="#23509E">editable text + stylus notes on top</text>
+
+            <!-- Page footer -->
+            <text x="488" y="339" font-family="JetBrains Mono, monospace" font-size="8" fill="#78756E">1 / 2</text>
+          </g>
+
+          <!-- Caption strip inside canvas -->
+          <text x="24" y="346" font-family="JetBrains Mono, monospace" font-size="10" fill="#78756E">1. Press ⌥⌘R or drop a file</text>
+          <text x="24" y="364" font-family="JetBrains Mono, monospace" font-size="10" fill="#78756E">2. Built locally on your Mac</text>
+          <text x="24" y="382" font-family="JetBrains Mono, monospace" font-size="10" fill="#171715">3. Editable on tablet in seconds</text>
+        </svg>
+      </div>
     </div>
-  </div>
-</section>
+  </section>
+
+  <!-- ── PROBLEM VS SOLUTION ───────────────────────────────────────── -->
+  <section class="block" id="problem">
+    <div class="wrap">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">The Problem</div>
+          <h2>Getting work onto a reMarkable shouldn't mean freezing it into PDFs.</h2>
+        </div>
+        <p class="section-desc">
+          The reMarkable is the best distraction-free reading and thinking surface ever made — until you try to send a Markdown spec, a long web essay, or a revised draft from your Mac.
+        </p>
+      </div>
+
+      <div class="compare-grid">
+        <!-- Before -->
+        <div class="compare-col before">
+          <span class="compare-tag">Without Quill</span>
+          <div class="compare-art">
+            <svg viewBox="0 0 420 140" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Duplicate frozen PDF files piling up">
+              <!-- Stacked messy duplicate PDFs -->
+              <rect x="26" y="28" width="114" height="86" rx="6" fill="#ECE8DF" stroke="#C8C1B4" transform="rotate(-4 83 71)"/>
+              <rect x="44" y="24" width="114" height="86" rx="6" fill="#F4F1EA" stroke="#C8C1B4" transform="rotate(2 101 67)"/>
+              <rect x="62" y="22" width="118" height="88" rx="6" fill="#FFFFFF" stroke="#B8B0A2"/>
+              <rect x="74" y="34" width="32" height="14" rx="3" fill="#ECE8DF"/>
+              <text x="80" y="44" font-family="JetBrains Mono, monospace" font-size="8.5" fill="#78756E">PDF</text>
+              <text x="74" y="64" font-family="JetBrains Mono, monospace" font-size="9.5" fill="#4A4843">Spec_v2_final.pdf</text>
+              <line x1="74" y1="76" x2="162" y2="76" stroke="#DCD7CC" stroke-width="2"/>
+              <line x1="74" y1="86" x2="146" y2="86" stroke="#DCD7CC" stroke-width="2"/>
+              <line x1="74" y1="96" x2="154" y2="96" stroke="#DCD7CC" stroke-width="2"/>
+
+              <!-- Friction labels -->
+              <rect x="208" y="22" width="190" height="26" rx="5" fill="#FBF9F5" stroke="#DCD7CC"/>
+              <text x="220" y="39" font-family="JetBrains Mono, monospace" font-size="10" fill="#78756E">1. Export Markdown → PDF</text>
+
+              <rect x="208" y="56" width="190" height="26" rx="5" fill="#FBF9F5" stroke="#DCD7CC"/>
+              <text x="220" y="73" font-family="JetBrains Mono, monospace" font-size="10" fill="#78756E">2. Open desktop app, drag in</text>
+
+              <rect x="208" y="90" width="190" height="26" rx="5" fill="#FBF9F5" stroke="#DCD7CC"/>
+              <text x="220" y="107" font-family="JetBrains Mono, monospace" font-size="10" fill="#B8422B">3. Revise → duplicate file #4</text>
+            </svg>
+          </div>
+          <ul class="compare-list">
+            <li><span class="mark-x">×</span><span><strong>Frozen output.</strong> Print-to-PDF locks your Markdown into static pages — you can't edit text or reflow paragraphs on the tablet.</span></li>
+            <li><span class="mark-x">×</span><span><strong>Duplicate clutter.</strong> Pushing an updated draft creates a second copy alongside the old one every single time.</span></li>
+            <li><span class="mark-x">×</span><span><strong>Broken tables &amp; articles.</strong> Wide Markdown tables clip off the margin; web printouts drag navbars and ads onto e-ink.</span></li>
+            <li><span class="mark-x">×</span><span><strong>Connect-gated deletes.</strong> Most CLI tools rely on legacy endpoints that return 401 on free accounts.</span></li>
+          </ul>
+        </div>
+
+        <!-- After -->
+        <div class="compare-col after">
+          <span class="compare-tag">With Quill</span>
+          <div class="compare-art">
+            <svg viewBox="0 0 420 140" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Single clean native notebook updated in place">
+              <!-- Single crisp native notebook -->
+              <rect x="34" y="20" width="136" height="98" rx="7" fill="#FFFFFF" stroke="#171715" stroke-width="1.3"/>
+              <rect x="46" y="32" width="54" height="15" rx="3" fill="#E2EFE8"/>
+              <text x="52" y="42.5" font-family="JetBrains Mono, monospace" font-size="8.5" fill="#2D6A4F">v6 NOTE</text>
+              <text x="46" y="64" font-family="Newsreader, Georgia, serif" font-size="13.5" fill="#171715">Q4 Spec</text>
+              <line x1="46" y1="74" x2="152" y2="74" stroke="#4A4843" stroke-width="1.5"/>
+              <line x1="46" y1="84" x2="136" y2="84" stroke="#9E9A91" stroke-width="1.5"/>
+              <!-- In-place update loop badge -->
+              <rect x="46" y="94" width="112" height="16" rx="3" fill="#F4E3DE"/>
+              <text x="54" y="105" font-family="JetBrains Mono, monospace" font-size="8.5" fill="#B8422B">↻ updated in place</text>
+
+              <!-- Direct arrow -->
+              <path d="M180 69 L212 69" stroke="#B8422B" stroke-width="1.6"/>
+              <polygon points="212,65 220,69 212,73" fill="#B8422B"/>
+
+              <!-- Single step summary -->
+              <rect x="228" y="26" width="166" height="86" rx="7" fill="#FBF9F5" stroke="#CFC8BA"/>
+              <text x="242" y="50" font-family="JetBrains Mono, monospace" font-size="11" font-weight="500" fill="#171715">⌥⌘R  or  Drop file</text>
+              <text x="242" y="72" font-family="DM Sans, sans-serif" font-size="11" fill="#4A4843">Builds v6 locally, routes</text>
+              <text x="242" y="88" font-family="DM Sans, sans-serif" font-size="11" fill="#4A4843">to folder, syncs via v3.</text>
+            </svg>
+          </div>
+          <ul class="compare-list">
+            <li><span class="mark-ok">✓</span><span><strong>Native editable notebooks.</strong> Markdown compiles directly to reMarkable v6 typed text — headings, lists, and prose stay editable on device.</span></li>
+            <li><span class="mark-ok">✓</span><span><strong>Updates in place.</strong> Re-pushing a note replaces the previous version cleanly via sync-v3 soft-delete. One note, always current.</span></li>
+            <li><span class="mark-ok">✓</span><span><strong>Readable tables &amp; articles.</strong> Tables auto-paginate into crisp raster chunks; bare URLs extract clean article text before upload.</span></li>
+            <li><span class="mark-ok">✓</span><span><strong>Free-account native.</strong> Push, raw PDF/EPUB send, and cloud delete all run over sync v3 — no Connect tier needed.</span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── INTERACTIVE FORMAT PIPELINE ───────────────────────────────── -->
+  <section class="block" id="pipeline">
+    <div class="wrap">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">Format Intelligence</div>
+          <h2>Give Quill whatever you're reading. It picks the right format.</h2>
+        </div>
+        <p class="section-desc">
+          Select a format below to see how Quill transforms it on your Mac before it ever touches your reMarkable account.
+        </p>
+      </div>
+
+      <div class="pipeline-shell">
+        <div class="pipeline-tabs" role="tablist" aria-label="Supported input formats">
+          <button class="pipe-tab" role="tab" aria-selected="true" data-mode="markdown">
+            <span class="ext">.md · .txt</span>
+            <span class="label">Markdown → Notebook</span>
+          </button>
+          <button class="pipe-tab" role="tab" aria-selected="false" data-mode="article">
+            <span class="ext">https:// · .html</span>
+            <span class="label">URL → Clean Article</span>
+          </button>
+          <button class="pipe-tab" role="tab" aria-selected="false" data-mode="raw">
+            <span class="ext">.pdf · .epub</span>
+            <span class="label">Raw Document Send</span>
+          </button>
+          <button class="pipe-tab" role="tab" aria-selected="false" data-mode="update">
+            <span class="ext">sync v3</span>
+            <span class="label">Update in Place</span>
+          </button>
+        </div>
+
+        <div class="pipeline-stage" id="pipeline-stage" role="tabpanel">
+          <div class="stage-visual" id="stage-svg"></div>
+          <div class="stage-copy">
+            <h3 id="stage-title"></h3>
+            <p id="stage-desc"></p>
+            <ul class="stage-specs" id="stage-specs"></ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── WORKFLOW ENTRY POINTS ─────────────────────────────────────── -->
+  <section class="block" id="workflow">
+    <div class="wrap">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">Zero-Friction Workflow</div>
+          <h2>Four ways in, all wired to the same engine.</h2>
+        </div>
+        <p class="section-desc">
+          Stay in your editor, browser, or Finder. Quill stays out of the way until you send something, then tracks every push in an actionable history menu.
+        </p>
+      </div>
+
+      <div class="entry-list">
+        <div class="entry-row">
+          <span class="entry-num">01</span>
+          <div class="entry-title">Global Hotkey</div>
+          <p class="entry-desc">Copy Markdown, plain text, or a bare URL in any app and hit the shortcut. Quill detects the content type and sends it immediately.</p>
+          <span class="entry-trigger">⌥⌘R</span>
+        </div>
+
+        <div class="entry-row">
+          <span class="entry-num">02</span>
+          <div class="entry-title">Menu Bar &amp; Folders</div>
+          <p class="entry-desc">Pick any folder from your live reMarkable directory tree, send a file, watch upload progress, or open/delete past pushes directly from History.</p>
+          <span class="entry-trigger">Menu Bar · Send File…</span>
+        </div>
+
+        <div class="entry-row">
+          <span class="entry-num">03</span>
+          <div class="entry-title">Watched Inbox Folder</div>
+          <p class="entry-desc">Drop any `.md`, `.txt`, `.html`, `.pdf`, or `.epub` into your inbox folder. Quill uploads it automatically and archives the file into `Sent/`.</p>
+          <span class="entry-trigger">~/Quill Inbox</span>
+        </div>
+
+        <div class="entry-row">
+          <span class="entry-num">04</span>
+          <div class="entry-title">Finder Quick Action</div>
+          <p class="entry-desc">Right-click any supported file in Finder or selected text in any macOS app to route it straight to your tablet without opening Quill.</p>
+          <span class="entry-trigger">Quick Actions → Quill</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── ARCHITECTURE & PRIVACY ────────────────────────────────────── -->
+  <section class="arch-block" id="privacy">
+    <div class="wrap">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">Architecture &amp; Privacy</div>
+          <h2>Direct from your Mac to your tablet. Nobody in the middle.</h2>
+        </div>
+        <p class="section-desc">
+          Every document conversion, table rasterization, and sync-v3 upload happens locally on your Mac. There is no Quill backend, no tracking, and no account to create.
+        </p>
+      </div>
+
+      <div class="arch-diagram" aria-label="Architecture diagram showing direct connection from Mac to reMarkable Cloud with no intermediary server">
+        <svg viewBox="0 0 960 190" fill="none" xmlns="http://www.w3.org/2000/svg" role="img">
+          <!-- Node 1: Your Mac -->
+          <rect x="20" y="28" width="248" height="126" rx="10" fill="#FBF9F5" stroke="#171715" stroke-width="1.4"/>
+          <text x="40" y="54" font-family="JetBrains Mono, monospace" font-size="10.5" fill="#B8422B">01 · LOCAL ON YOUR MAC</text>
+          <text x="40" y="80" font-family="Newsreader, Georgia, serif" font-size="20" fill="#171715">Quill.app</text>
+          <text x="40" y="104" font-family="DM Sans, sans-serif" font-size="12.5" fill="#4A4843">Article extraction, v6 builder,</text>
+          <text x="40" y="122" font-family="DM Sans, sans-serif" font-size="12.5" fill="#4A4843">table pagination, local sync engine</text>
+
+          <!-- Direct TLS Line -->
+          <line x1="268" y1="91" x2="356" y2="91" stroke="#171715" stroke-width="1.6"/>
+          <polygon points="356,86 366,91 356,96" fill="#171715"/>
+          <text x="278" y="79" font-family="JetBrains Mono, monospace" font-size="10" fill="#4A4843">HTTPS · Sync v3</text>
+
+          <!-- Node 2: Your reMarkable Account -->
+          <rect x="368" y="28" width="248" height="126" rx="10" fill="#FBF9F5" stroke="#C8C1B4" stroke-width="1.4"/>
+          <text x="388" y="54" font-family="JetBrains Mono, monospace" font-size="10.5" fill="#2D6A4F">02 · YOUR ACCOUNT</text>
+          <text x="388" y="80" font-family="Newsreader, Georgia, serif" font-size="20" fill="#171715">reMarkable Cloud</text>
+          <text x="388" y="104" font-family="DM Sans, sans-serif" font-size="12.5" fill="#4A4843">Official device-code pairing.</text>
+          <text x="388" y="122" font-family="DM Sans, sans-serif" font-size="12.5" fill="#4A4843">Free tier &amp; Connect both work.</text>
+
+          <!-- Sync Line to Tablet -->
+          <line x1="616" y1="91" x2="696" y2="91" stroke="#171715" stroke-width="1.6"/>
+          <polygon points="696,86 706,91 696,96" fill="#171715"/>
+          <text x="628" y="79" font-family="JetBrains Mono, monospace" font-size="10" fill="#4A4843">Native sync</text>
+
+          <!-- Node 3: Tablet -->
+          <rect x="708" y="28" width="232" height="126" rx="10" fill="#FFFFFF" stroke="#171715" stroke-width="1.4"/>
+          <text x="728" y="54" font-family="JetBrains Mono, monospace" font-size="10.5" fill="#23509E">03 · ON DEVICE</text>
+          <text x="728" y="80" font-family="Newsreader, Georgia, serif" font-size="20" fill="#171715">Your reMarkable</text>
+          <text x="728" y="104" font-family="DM Sans, sans-serif" font-size="12.5" fill="#4A4843">Paper Pro, reMarkable 2, and</text>
+          <text x="728" y="122" font-family="DM Sans, sans-serif" font-size="12.5" fill="#4A4843">app.remarkable.com web viewer.</text>
+
+          <!-- Absent Middleman Callout -->
+          <rect x="330" y="164" width="320" height="22" rx="4" fill="#F4E3DE"/>
+          <text x="348" y="179" font-family="JetBrains Mono, monospace" font-size="10.5" fill="#B8422B">No Quill servers · No telemetry · No third-party cloud</text>
+        </svg>
+      </div>
+
+      <div class="truths">
+        <div class="truth">
+          <h3>Zero server footprint</h3>
+          <p>Your notes, articles, and PDFs never touch an intermediary server. Everything is packaged on your Mac and sent straight to your own reMarkable cloud.</p>
+        </div>
+        <div class="truth">
+          <h3>Official pairing flow</h3>
+          <p>Quill pairs once using reMarkable's standard 8-character device code. Credentials stay local on your machine.</p>
+        </div>
+        <div class="truth">
+          <h3>Open protocol foundation</h3>
+          <p>Built on the community's open-source Rust sync-v3 tooling, with upstreamed patches for free-account deletes, raw uploads, and current cPages metadata.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── HONEST LIMITS ─────────────────────────────────────────────── -->
+  <section class="limits-band">
+    <div class="wrap limits-grid">
+      <div>
+        <h3>Known platform limits</h3>
+        <p>What the reMarkable v6 format and free-tier API do not support today — stated upfront so there are no surprises.</p>
+      </div>
+      <div class="limits-cols">
+        <div class="limit-item">
+          <strong>Tables are rasterized</strong>
+          reMarkable v6 typed text has no native table primitive. Quill renders tables cleanly as paginated PNGs (5 rows per chunk) so they stay sharp and readable.
+        </div>
+        <div class="limit-item">
+          <strong>Folder creation on free plans</strong>
+          Creating new folders remotely still requires Connect; create folders on your tablet and Quill routes pushes into them automatically.
+        </div>
+        <div class="limit-item">
+          <strong>Raw PDF/EPUB updates</strong>
+          Update-in-place applies to Markdown pushes. Raw PDF and EPUB sends always create a new document so existing annotations are never overwritten.
+        </div>
+        <div class="limit-item">
+          <strong>Typed-text styling</strong>
+          v6 typed text supports headings, bullets, and prose in Latin script; inline bold/italic is not yet exposed in the native typed-text layer.
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
 
 <footer>
-  <p>
-    <a href="https://github.com/pasevin/quill">Source</a><span class="sep">·</span>
-    <a href="https://remarkable.com">reMarkable</a> is a trademark of Remarkable AS — Quill is an independent project, not affiliated with Remarkable AS
-  </p>
+  <div class="wrap foot-inner">
+    <span>Quill for macOS · Built by <a href="https://github.com/pasevin">Aleksandr Pasevin</a></span>
+    <span>reMarkable is a trademark of reMarkable AS. Quill is an independent project, not affiliated with reMarkable AS.</span>
+  </div>
 </footer>
+
+<script>
+  const MODES = {
+    markdown: {
+      title: "Markdown becomes a native v6 notebook.",
+      desc: "Headings, bullet lists, and paragraphs are compiled locally into reMarkable's native typed-text format — so you can keep editing on the tablet. Wide Markdown tables are automatically rasterized and split into readable chunks.",
+      specs: [
+        ["Input", ".md, .txt, or clipboard selection"],
+        ["Tablet format", "Native v6 typed text + PNG tables"],
+        ["Update behavior", "Updates existing note in place"],
+        ["Account tier", "Free & Connect"]
+      ],
+      svg: `
+        <svg viewBox="0 0 460 250" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="12" y="16" width="188" height="218" rx="8" fill="#FFFFFF" stroke="#CFC8BA"/>
+          <text x="26" y="38" font-family="JetBrains Mono, monospace" font-size="9.5" fill="#78756E">design-notes.md</text>
+          <line x1="12" y1="48" x2="200" y2="48" stroke="#ECE8DF"/>
+          <text x="26" y="70" font-family="JetBrains Mono, monospace" font-size="10.5" fill="#B8422B"># Sync v3 Plan</text>
+          <text x="26" y="92" font-family="JetBrains Mono, monospace" font-size="9.5" fill="#4A4843">- Flip deleted flag</text>
+          <text x="26" y="108" font-family="JetBrains Mono, monospace" font-size="9.5" fill="#4A4843">- Republish hash tree</text>
+          <text x="26" y="132" font-family="JetBrains Mono, monospace" font-size="9" fill="#78756E">| Step | Status |</text>
+          <text x="26" y="146" font-family="JetBrains Mono, monospace" font-size="9" fill="#78756E">|------|--------|</text>
+          <text x="26" y="160" font-family="JetBrains Mono, monospace" font-size="9" fill="#4A4843">| Push | Live   |</text>
+          <text x="26" y="174" font-family="JetBrains Mono, monospace" font-size="9" fill="#4A4843">| Del  | Live   |</text>
+          <rect x="26" y="198" width="96" height="20" rx="4" fill="#F4F1EA"/>
+          <text x="35" y="211" font-family="JetBrains Mono, monospace" font-size="9" fill="#171715">Plain Markdown</text>
+
+          <path d="M210 125 L246 125" stroke="#B8422B" stroke-width="1.8"/>
+          <polygon points="246,120 255,125 246,130" fill="#B8422B"/>
+
+          <rect x="262" y="16" width="186" height="218" rx="10" fill="#FBF9F4" stroke="#171715" stroke-width="1.4"/>
+          <text x="278" y="38" font-family="JetBrains Mono, monospace" font-size="9" fill="#2D6A4F">NATIVE v6 NOTEBOOK</text>
+          <line x1="262" y1="48" x2="448" y2="48" stroke="#E6E1D6"/>
+          <text x="278" y="74" font-family="Newsreader, Georgia, serif" font-size="16" fill="#171715">Sync v3 Plan</text>
+          <circle cx="282" cy="94" r="1.8" fill="#171715"/>
+          <text x="290" y="97" font-family="DM Sans, sans-serif" font-size="10" fill="#3D3B37">Flip deleted flag</text>
+          <circle cx="282" cy="112" r="1.8" fill="#171715"/>
+          <text x="290" y="115" font-family="DM Sans, sans-serif" font-size="10" fill="#3D3B37">Republish hash tree</text>
+          <rect x="278" y="130" width="154" height="58" rx="4" fill="#F4F1EA" stroke="#D8D2C5"/>
+          <line x1="278" y1="150" x2="432" y2="150" stroke="#D8D2C5"/>
+          <line x1="354" y1="130" x2="354" y2="188" stroke="#E6E1D6"/>
+          <text x="288" y="143" font-family="JetBrains Mono, monospace" font-size="8.5" fill="#171715">Step</text>
+          <text x="364" y="143" font-family="JetBrains Mono, monospace" font-size="8.5" fill="#171715">Status</text>
+          <text x="288" y="166" font-family="DM Sans, sans-serif" font-size="9.5" fill="#4A4843">Push</text>
+          <text x="364" y="166" font-family="DM Sans, sans-serif" font-size="9.5" fill="#2D6A4F">Live</text>
+          <text x="288" y="181" font-family="DM Sans, sans-serif" font-size="9.5" fill="#4A4843">Delete</text>
+          <text x="364" y="181" font-family="DM Sans, sans-serif" font-size="9.5" fill="#2D6A4F">Live</text>
+          <text x="278" y="214" font-family="Newsreader, Georgia, serif" font-style="italic" font-size="10.5" fill="#23509E">editable text on tablet</text>
+        </svg>
+      `
+    },
+    article: {
+      title: "Paste a URL. Read a calm, clutter-free article.",
+      desc: "Quill detects bare URLs on your clipboard or local HTML files, fetches the page, strips navigation chrome, sidebars, and ads, and builds a clean native notebook sized for e-ink reading.",
+      specs: [
+        ["Input", "Bare https:// URL or .html file"],
+        ["Extraction", "On-Mac readability parser"],
+        ["Tablet format", "Native v6 article notebook"],
+        ["Browser extension", "Not required"]
+      ],
+      svg: `
+        <svg viewBox="0 0 460 250" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="12" y="16" width="188" height="218" rx="8" fill="#FFFFFF" stroke="#CFC8BA"/>
+          <rect x="22" y="26" width="168" height="20" rx="4" fill="#F4F1EA"/>
+          <text x="30" y="39" font-family="JetBrains Mono, monospace" font-size="8.5" fill="#4A4843">https://blog.example/essay</text>
+          <!-- Cluttered web chrome -->
+          <rect x="22" y="56" width="168" height="16" rx="2" fill="#ECE8DF"/>
+          <rect x="22" y="80" width="112" height="114" rx="3" fill="#FBF9F5" stroke="#DCD7CC"/>
+          <rect x="140" y="80" width="50" height="54" rx="3" fill="#F4E3DE"/>
+          <text x="151" y="110" font-family="JetBrains Mono, monospace" font-size="8" fill="#B8422B">AD</text>
+          <rect x="140" y="142" width="50" height="52" rx="3" fill="#ECE8DF"/>
+          <line x1="30" y1="96" x2="122" y2="96" stroke="#171715" stroke-width="2"/>
+          <line x1="30" y1="112" x2="116" y2="112" stroke="#9E9A91" stroke-width="1.5"/>
+          <line x1="30" y1="124" x2="120" y2="124" stroke="#9E9A91" stroke-width="1.5"/>
+          <line x1="30" y1="136" x2="108" y2="136" stroke="#9E9A91" stroke-width="1.5"/>
+          <rect x="22" y="202" width="168" height="22" rx="3" fill="#ECE8DF"/>
+          <text x="58" y="216" font-family="JetBrains Mono, monospace" font-size="8" fill="#78756E">cookie banner</text>
+
+          <path d="M210 125 L246 125" stroke="#B8422B" stroke-width="1.8"/>
+          <polygon points="246,120 255,125 246,130" fill="#B8422B"/>
+
+          <rect x="262" y="16" width="186" height="218" rx="10" fill="#FBF9F4" stroke="#171715" stroke-width="1.4"/>
+          <text x="278" y="38" font-family="JetBrains Mono, monospace" font-size="9" fill="#2D6A4F">EXTRACTED ARTICLE</text>
+          <line x1="262" y1="48" x2="448" y2="48" stroke="#E6E1D6"/>
+          <text x="278" y="76" font-family="Newsreader, Georgia, serif" font-size="16" fill="#171715">On Quiet Tools</text>
+          <text x="278" y="92" font-family="JetBrains Mono, monospace" font-size="8.5" fill="#78756E">blog.example · 6 min read</text>
+          <line x1="278" y1="112" x2="430" y2="112" stroke="#3D3B37" stroke-width="1.5"/>
+          <line x1="278" y1="126" x2="422" y2="126" stroke="#3D3B37" stroke-width="1.5"/>
+          <line x1="278" y1="140" x2="432" y2="140" stroke="#3D3B37" stroke-width="1.5"/>
+          <line x1="278" y1="154" x2="390" y2="154" stroke="#3D3B37" stroke-width="1.5"/>
+          <line x1="278" y1="176" x2="426" y2="176" stroke="#78756E" stroke-width="1.5"/>
+          <line x1="278" y1="190" x2="414" y2="190" stroke="#78756E" stroke-width="1.5"/>
+          <text x="278" y="216" font-family="Newsreader, Georgia, serif" font-style="italic" font-size="10.5" fill="#23509E">zero ads, zero navbars</text>
+        </svg>
+      `
+    },
+    raw: {
+      title: "PDFs and EPUBs uploaded untouched.",
+      desc: "Research papers, books, and slides go straight through as raw bytes with current cPages / formatVersion 2 metadata — so they render identically on your tablet and open cleanly in the reMarkable web viewer.",
+      specs: [
+        ["Input", ".pdf or .epub via menu, Finder, or Inbox"],
+        ["Conversion", "None — original bytes preserved"],
+        ["Metadata", "Current cPages / formatVersion 2"],
+        ["Web viewer", "Opens cleanly (no 404s)"]
+      ],
+      svg: `
+        <svg viewBox="0 0 460 250" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="12" y="34" width="188" height="182" rx="8" fill="#FFFFFF" stroke="#CFC8BA"/>
+          <rect x="28" y="52" width="44" height="18" rx="4" fill="#F4E3DE"/>
+          <text x="38" y="64" font-family="JetBrains Mono, monospace" font-size="9.5" fill="#B8422B">PDF</text>
+          <rect x="78" y="52" width="52" height="18" rx="4" fill="#E4ECF8"/>
+          <text x="88" y="64" font-family="JetBrains Mono, monospace" font-size="9.5" fill="#23509E">EPUB</text>
+          <text x="28" y="96" font-family="Newsreader, Georgia, serif" font-size="15" fill="#171715">Attention Is All</text>
+          <text x="28" y="114" font-family="Newsreader, Georgia, serif" font-size="15" fill="#171715">You Need.pdf</text>
+          <text x="28" y="144" font-family="JetBrains Mono, monospace" font-size="9.5" fill="#78756E">2.4 MB · 15 pages</text>
+          <text x="28" y="162" font-family="JetBrains Mono, monospace" font-size="9.5" fill="#78756E">sha256 verified</text>
+          <rect x="28" y="182" width="144" height="18" rx="4" fill="#F4F1EA"/>
+          <text x="36" y="194" font-family="JetBrains Mono, monospace" font-size="8.5" fill="#4A4843">raw bytes · no reflow</text>
+
+          <path d="M210 125 L246 125" stroke="#B8422B" stroke-width="1.8"/>
+          <polygon points="246,120 255,125 246,130" fill="#B8422B"/>
+
+          <rect x="262" y="16" width="186" height="218" rx="10" fill="#FBF9F4" stroke="#171715" stroke-width="1.4"/>
+          <text x="278" y="38" font-family="JetBrains Mono, monospace" font-size="9" fill="#2D6A4F">CPAGES v2 READY</text>
+          <line x1="262" y1="48" x2="448" y2="48" stroke="#E6E1D6"/>
+          <rect x="278" y="62" width="154" height="96" rx="4" fill="#FFFFFF" stroke="#D8D2C5"/>
+          <text x="292" y="88" font-family="Newsreader, Georgia, serif" font-size="12.5" fill="#171715">Attention Is All You Need</text>
+          <line x1="292" y1="102" x2="350" y2="102" stroke="#9E9A91" stroke-width="1.5"/>
+          <line x1="292" y1="112" x2="346" y2="112" stroke="#9E9A91" stroke-width="1.5"/>
+          <line x1="292" y1="122" x2="348" y2="122" stroke="#9E9A91" stroke-width="1.5"/>
+          <line x1="364" y1="102" x2="418" y2="102" stroke="#9E9A91" stroke-width="1.5"/>
+          <line x1="364" y1="112" x2="414" y2="112" stroke="#9E9A91" stroke-width="1.5"/>
+          <line x1="364" y1="122" x2="416" y2="122" stroke="#9E9A91" stroke-width="1.5"/>
+          <rect x="292" y="134" width="126" height="14" rx="2" fill="#E4ECF8"/>
+          <text x="314" y="144" font-family="JetBrains Mono, monospace" font-size="8" fill="#23509E">exact original layout</text>
+          <text x="278" y="184" font-family="DM Sans, sans-serif" font-size="10.5" fill="#4A4843">✓ Paper Pro &amp; rM2</text>
+          <text x="278" y="202" font-family="DM Sans, sans-serif" font-size="10.5" fill="#4A4843">✓ app.remarkable.com</text>
+        </svg>
+      `
+    },
+    update: {
+      title: "Revise on Mac. One document on tablet.",
+      desc: "When you push an updated Markdown note with the same title, Quill soft-deletes the previous version via the sync-v3 hash tree and publishes the new one — keeping your tablet library clean without a Connect subscription.",
+      specs: [
+        ["Mechanism", "Sync-v3 metadata soft-delete"],
+        ["Conflict handling", "Retries root generation races"],
+        ["History actions", "Open in web · Copy ID · Delete"],
+        ["Account tier", "Works on free accounts"]
+      ],
+      svg: `
+        <svg viewBox="0 0 460 250" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- Old version faded -->
+          <rect x="20" y="34" width="166" height="84" rx="8" fill="#F4F1EA" stroke="#CFC8BA" stroke-dasharray="4 3"/>
+          <text x="34" y="58" font-family="JetBrains Mono, monospace" font-size="9" fill="#78756E">PREVIOUS VERSION</text>
+          <text x="34" y="80" font-family="Newsreader, Georgia, serif" font-size="14" fill="#78756E" text-decoration="line-through">Q4 Spec (v1)</text>
+          <text x="34" y="102" font-family="JetBrains Mono, monospace" font-size="9" fill="#B8422B">deleted: true (sync v3)</text>
+
+          <!-- New version crisp -->
+          <rect x="20" y="138" width="166" height="84" rx="8" fill="#FFFFFF" stroke="#171715" stroke-width="1.3"/>
+          <text x="34" y="162" font-family="JetBrains Mono, monospace" font-size="9" fill="#2D6A4F">NEW PUSH</text>
+          <text x="34" y="184" font-family="Newsreader, Georgia, serif" font-size="14" fill="#171715">Q4 Spec (v2)</text>
+          <text x="34" y="206" font-family="JetBrains Mono, monospace" font-size="9" fill="#4A4843">root gen +1 · atomic</text>
+
+          <!-- Merge arrows -->
+          <path d="M186 76 C220 76, 218 125, 250 125" stroke="#C8C1B4" stroke-width="1.5" stroke-dasharray="3 3"/>
+          <path d="M186 180 C220 180, 218 125, 250 125" stroke="#B8422B" stroke-width="1.8"/>
+          <polygon points="250,120 259,125 250,130" fill="#B8422B"/>
+
+          <!-- Clean tablet library -->
+          <rect x="266" y="28" width="180" height="194" rx="10" fill="#FBF9F4" stroke="#171715" stroke-width="1.4"/>
+          <text x="282" y="50" font-family="JetBrains Mono, monospace" font-size="9" fill="#78756E">TABLET FOLDER</text>
+          <line x1="266" y1="60" x2="446" y2="60" stroke="#E6E1D6"/>
+
+          <rect x="282" y="76" width="148" height="44" rx="6" fill="#FFFFFF" stroke="#171715"/>
+          <text x="294" y="96" font-family="DM Sans, sans-serif" font-size="11" font-weight="600" fill="#171715">Q4 Spec</text>
+          <text x="294" y="111" font-family="JetBrains Mono, monospace" font-size="8.5" fill="#2D6A4F">1 clean copy · latest</text>
+
+          <rect x="282" y="132" width="148" height="34" rx="6" fill="#F4F1EA" stroke="#DCD7CC"/>
+          <text x="294" y="153" font-family="DM Sans, sans-serif" font-size="10.5" fill="#4A4843">Meeting Notes</text>
+
+          <rect x="282" y="176" width="148" height="34" rx="6" fill="#F4F1EA" stroke="#DCD7CC"/>
+          <text x="294" y="197" font-family="DM Sans, sans-serif" font-size="10.5" fill="#4A4843">Reading List</text>
+        </svg>
+      `
+    }
+  };
+
+  const tabs = document.querySelectorAll('.pipe-tab');
+  const svgEl = document.getElementById('stage-svg');
+  const titleEl = document.getElementById('stage-title');
+  const descEl = document.getElementById('stage-desc');
+  const specsEl = document.getElementById('stage-specs');
+
+  function renderMode(key) {
+    const m = MODES[key];
+    if (!m) return;
+    tabs.forEach(t => t.setAttribute('aria-selected', String(t.dataset.mode === key)));
+    svgEl.innerHTML = m.svg;
+    titleEl.textContent = m.title;
+    descEl.textContent = m.desc;
+    specsEl.innerHTML = m.specs
+      .map(([k, v]) => `<li><span class="k">${k}</span><span class="v">${v}</span></li>`)
+      .join('');
+  }
+
+  tabs.forEach(t => t.addEventListener('click', () => renderMode(t.dataset.mode)));
+  renderMode('markdown');
+</script>
 
 </body>
 </html>
