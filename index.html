@@ -12,22 +12,24 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
 <style>
   :root {
-    /* Tactile e-ink paper & graphite palette */
+    /* Tactile e-ink paper & fountain-pen ink palette */
     --paper: #F6F4EE;
     --paper-deep: #ECE8DF;
     --paper-card: #FBF9F5;
     --paper-white: #FFFFFF;
     --ink: #171715;
-    --ink-soft: #4A4843;
-    --ink-muted: #78756E;
+    --ink-soft: #3F3D39;
+    --ink-muted: #595650;
     --rule: #DCD7CC;
-    --rule-strong: #C8C1B4;
-    --accent: #B8422B;       /* Paper Pro terracotta marker */
-    --accent-soft: #F4E3DE;
-    --cobalt: #23509E;       /* Paper Pro blue ink */
-    --cobalt-soft: #E4ECF8;
-    --sage: #2D6A4F;         /* Sync/verified green */
-    --sage-soft: #E2EFE8;
+    --rule-strong: #C4BDB0;
+    --accent: #1D4B8F;       /* Fountain-pen cobalt ink (primary brand) */
+    --accent-soft: #E5EDF8;
+    --cobalt: #1D4B8F;
+    --cobalt-soft: #E5EDF8;
+    --sage: #1E5E42;         /* Positive / verified sync */
+    --sage-soft: #E1EFE8;
+    --warn: #A83823;         /* Friction / negative contrast only */
+    --warn-soft: #F6E5E1;
 
     --serif: "Newsreader", "Iowan Old Style", Georgia, serif;
     --sans: "DM Sans", -apple-system, BlinkMacSystemFont, sans-serif;
@@ -260,10 +262,10 @@
   }
   .section-head {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 40px;
-    align-items: end;
-    margin-bottom: 48px;
+    grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
+    gap: 44px;
+    align-items: start;
+    margin-bottom: 44px;
   }
   h2 {
     font-family: var(--serif);
@@ -278,6 +280,7 @@
     font-size: 16px;
     color: var(--ink-soft);
     max-width: 480px;
+    padding-top: 6px;
     text-wrap: pretty;
   }
 
@@ -314,12 +317,12 @@
     border-radius: 4px;
   }
   .compare-col.before .compare-tag {
-    color: var(--ink-muted);
-    background: var(--paper-deep);
+    color: var(--warn);
+    background: var(--warn-soft);
   }
   .compare-col.after .compare-tag {
-    color: var(--accent);
-    background: var(--accent-soft);
+    color: var(--sage);
+    background: var(--sage-soft);
   }
   .compare-art {
     background: var(--paper);
@@ -343,8 +346,8 @@
     color: var(--ink-soft);
   }
   .compare-list strong { color: var(--ink); font-weight: 600; }
-  .mark-x { color: var(--ink-muted); font-family: var(--mono); font-weight: 500; }
-  .mark-ok { color: var(--accent); font-family: var(--mono); font-weight: 600; }
+  .mark-x { color: var(--warn); font-family: var(--mono); font-weight: 600; }
+  .mark-ok { color: var(--sage); font-family: var(--mono); font-weight: 600; }
 
   /* ── Interactive Pipeline ("One input, the right output") ───────── */
   .pipeline-shell {
@@ -706,9 +709,9 @@
           <g filter="url(#softshadow)">
             <rect x="24" y="50" width="224" height="252" rx="10" fill="#FFFFFF" stroke="#CFC8BA"/>
             <!-- Menu Item 1: Active -->
-            <rect x="32" y="60" width="208" height="30" rx="6" fill="#F4E3DE"/>
+            <rect x="32" y="60" width="208" height="30" rx="6" fill="#E5EDF8"/>
             <text x="44" y="79" font-family="DM Sans, sans-serif" font-size="11.5" font-weight="600" fill="#171715">Send Clipboard</text>
-            <text x="200" y="79" font-family="JetBrains Mono, monospace" font-size="10.5" fill="#B8422B">⌥⌘R</text>
+            <text x="174" y="79" font-family="JetBrains Mono, monospace" font-size="9.5" fill="#1D4B8F">Opt+Cmd+R</text>
 
             <!-- Menu Item 2 -->
             <text x="44" y="111" font-family="DM Sans, sans-serif" font-size="11.5" fill="#4A4843">Send File… (.md, .pdf, .epub)</text>
@@ -739,10 +742,10 @@
           </g>
 
           <!-- Sync Connector Flow Line -->
-          <path d="M248 162 C278 162, 272 162, 302 162" stroke="#B8422B" stroke-width="1.75" stroke-dasharray="4 3"/>
-          <polygon points="302,158 310,162 302,166" fill="#B8422B"/>
+          <path d="M248 162 C278 162, 272 162, 302 162" stroke="#1D4B8F" stroke-width="1.75" stroke-dasharray="4 3"/>
+          <polygon points="302,158 310,162 302,166" fill="#1D4B8F"/>
           <rect x="255" y="136" width="46" height="18" rx="4" fill="#FBF9F5" stroke="#DCD7CC"/>
-          <text x="261" y="148" font-family="JetBrains Mono, monospace" font-size="8.5" fill="#B8422B">sync v3</text>
+          <text x="261" y="148" font-family="JetBrains Mono, monospace" font-size="8.5" fill="#1D4B8F">sync v3</text>
 
           <!-- reMarkable Paper Pro Tablet Frame -->
           <g filter="url(#softshadow)">
@@ -761,7 +764,7 @@
             <!-- Native Typed Document Inside Tablet -->
             <text x="336" y="96" font-family="Newsreader, Georgia, serif" font-size="17" font-weight="500" fill="#171715">Q4 Architecture RFC</text>
             <!-- Subtle marker underline -->
-            <path d="M336 102 Q390 100 448 103" stroke="#B8422B" stroke-width="2" stroke-linecap="round" opacity="0.75"/>
+            <path d="M336 102 Q390 100 448 103" stroke="#1D4B8F" stroke-width="2" stroke-linecap="round" opacity="0.75"/>
 
             <!-- Editable typed prose lines -->
             <text x="336" y="122" font-family="DM Sans, sans-serif" font-size="9.5" fill="#3D3B37">Moving uploads directly to the</text>
@@ -795,8 +798,8 @@
           </g>
 
           <!-- Caption strip inside canvas -->
-          <text x="24" y="346" font-family="JetBrains Mono, monospace" font-size="10" fill="#78756E">1. Press ⌥⌘R or drop a file</text>
-          <text x="24" y="364" font-family="JetBrains Mono, monospace" font-size="10" fill="#78756E">2. Built locally on your Mac</text>
+          <text x="24" y="346" font-family="JetBrains Mono, monospace" font-size="10" fill="#595650">1. Press Opt+Cmd+R or drop a file</text>
+          <text x="24" y="364" font-family="JetBrains Mono, monospace" font-size="10" fill="#595650">2. Built locally on your Mac</text>
           <text x="24" y="382" font-family="JetBrains Mono, monospace" font-size="10" fill="#171715">3. Editable on tablet in seconds</text>
         </svg>
       </div>
@@ -806,11 +809,9 @@
   <!-- ── PROBLEM VS SOLUTION ───────────────────────────────────────── -->
   <section class="block" id="problem">
     <div class="wrap">
+      <div class="eyebrow">The Problem</div>
       <div class="section-head">
-        <div>
-          <div class="eyebrow">The Problem</div>
-          <h2>Getting work onto a reMarkable shouldn't mean freezing it into PDFs.</h2>
-        </div>
+        <h2>Getting work onto a reMarkable shouldn't mean freezing it into PDFs.</h2>
         <p class="section-desc">
           The reMarkable is the best distraction-free reading and thinking surface ever made — until you try to send a Markdown spec, a long web essay, or a revised draft from your Mac.
         </p>
@@ -821,27 +822,31 @@
         <div class="compare-col before">
           <span class="compare-tag">Without Quill</span>
           <div class="compare-art">
-            <svg viewBox="0 0 420 140" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Duplicate frozen PDF files piling up">
+            <svg viewBox="0 0 420 148" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Duplicate frozen PDF files piling up">
               <!-- Stacked messy duplicate PDFs -->
-              <rect x="26" y="28" width="114" height="86" rx="6" fill="#ECE8DF" stroke="#C8C1B4" transform="rotate(-4 83 71)"/>
-              <rect x="44" y="24" width="114" height="86" rx="6" fill="#F4F1EA" stroke="#C8C1B4" transform="rotate(2 101 67)"/>
-              <rect x="62" y="22" width="118" height="88" rx="6" fill="#FFFFFF" stroke="#B8B0A2"/>
-              <rect x="74" y="34" width="32" height="14" rx="3" fill="#ECE8DF"/>
-              <text x="80" y="44" font-family="JetBrains Mono, monospace" font-size="8.5" fill="#78756E">PDF</text>
-              <text x="74" y="64" font-family="JetBrains Mono, monospace" font-size="9.5" fill="#4A4843">Spec_v2_final.pdf</text>
-              <line x1="74" y1="76" x2="162" y2="76" stroke="#DCD7CC" stroke-width="2"/>
-              <line x1="74" y1="86" x2="146" y2="86" stroke="#DCD7CC" stroke-width="2"/>
-              <line x1="74" y1="96" x2="154" y2="96" stroke="#DCD7CC" stroke-width="2"/>
+              <rect x="18" y="28" width="132" height="94" rx="6" fill="#ECE8DF" stroke="#C4BDB0" transform="rotate(-4 84 75)"/>
+              <rect x="34" y="24" width="132" height="94" rx="6" fill="#F4F1EA" stroke="#C4BDB0" transform="rotate(2 100 71)"/>
+              <rect x="48" y="22" width="136" height="98" rx="6" fill="#FFFFFF" stroke="#A69E90"/>
+              <rect x="60" y="34" width="38" height="17" rx="3" fill="#F6E5E1"/>
+              <text x="68" y="46" font-family="JetBrains Mono, monospace" font-size="10" font-weight="500" fill="#A83823">PDF</text>
+              <text x="60" y="69" font-family="JetBrains Mono, monospace" font-size="10.5" fill="#171715">Spec_v2_final</text>
+              <line x1="60" y1="82" x2="168" y2="82" stroke="#DCD7CC" stroke-width="2"/>
+              <line x1="60" y1="93" x2="150" y2="93" stroke="#DCD7CC" stroke-width="2"/>
+              <line x1="60" y1="104" x2="158" y2="104" stroke="#DCD7CC" stroke-width="2"/>
 
-              <!-- Friction labels -->
-              <rect x="208" y="22" width="190" height="26" rx="5" fill="#FBF9F5" stroke="#DCD7CC"/>
-              <text x="220" y="39" font-family="JetBrains Mono, monospace" font-size="10" fill="#78756E">1. Export Markdown → PDF</text>
+              <!-- Friction arrow -->
+              <path d="M192 71 L212 71" stroke="#A83823" stroke-width="1.5" stroke-dasharray="3 2"/>
+              <polygon points="212,67 219,71 212,75" fill="#A83823"/>
 
-              <rect x="208" y="56" width="190" height="26" rx="5" fill="#FBF9F5" stroke="#DCD7CC"/>
-              <text x="220" y="73" font-family="JetBrains Mono, monospace" font-size="10" fill="#78756E">2. Open desktop app, drag in</text>
+              <!-- Friction steps -->
+              <rect x="224" y="20" width="180" height="30" rx="5" fill="#FBF9F5" stroke="#DCD7CC"/>
+              <text x="234" y="39" font-family="DM Sans, sans-serif" font-size="11.5" fill="#3F3D39">1. Export Markdown to PDF</text>
 
-              <rect x="208" y="90" width="190" height="26" rx="5" fill="#FBF9F5" stroke="#DCD7CC"/>
-              <text x="220" y="107" font-family="JetBrains Mono, monospace" font-size="10" fill="#B8422B">3. Revise → duplicate file #4</text>
+              <rect x="224" y="58" width="180" height="30" rx="5" fill="#FBF9F5" stroke="#DCD7CC"/>
+              <text x="234" y="77" font-family="DM Sans, sans-serif" font-size="11.5" fill="#3F3D39">2. Drag into desktop app</text>
+
+              <rect x="224" y="96" width="180" height="30" rx="5" fill="#F6E5E1" stroke="#DFB8B0"/>
+              <text x="234" y="115" font-family="DM Sans, sans-serif" font-size="11.5" font-weight="500" fill="#A83823">3. Revise → duplicate #4</text>
             </svg>
           </div>
           <ul class="compare-list">
@@ -856,27 +861,28 @@
         <div class="compare-col after">
           <span class="compare-tag">With Quill</span>
           <div class="compare-art">
-            <svg viewBox="0 0 420 140" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Single clean native notebook updated in place">
+            <svg viewBox="0 0 420 148" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Single clean native notebook updated in place">
               <!-- Single crisp native notebook -->
-              <rect x="34" y="20" width="136" height="98" rx="7" fill="#FFFFFF" stroke="#171715" stroke-width="1.3"/>
-              <rect x="46" y="32" width="54" height="15" rx="3" fill="#E2EFE8"/>
-              <text x="52" y="42.5" font-family="JetBrains Mono, monospace" font-size="8.5" fill="#2D6A4F">v6 NOTE</text>
-              <text x="46" y="64" font-family="Newsreader, Georgia, serif" font-size="13.5" fill="#171715">Q4 Spec</text>
-              <line x1="46" y1="74" x2="152" y2="74" stroke="#4A4843" stroke-width="1.5"/>
-              <line x1="46" y1="84" x2="136" y2="84" stroke="#9E9A91" stroke-width="1.5"/>
+              <rect x="20" y="20" width="156" height="106" rx="7" fill="#FFFFFF" stroke="#171715" stroke-width="1.3"/>
+              <rect x="32" y="32" width="66" height="18" rx="3" fill="#E1EFE8"/>
+              <text x="39" y="44.5" font-family="JetBrains Mono, monospace" font-size="9.5" font-weight="500" fill="#1E5E42">v6 NOTE</text>
+              <text x="32" y="69" font-family="Newsreader, Georgia, serif" font-size="15.5" fill="#171715">Q4 Spec</text>
+              <line x1="32" y1="80" x2="158" y2="80" stroke="#3F3D39" stroke-width="1.5"/>
+              <line x1="32" y1="90" x2="142" y2="90" stroke="#9E9A91" stroke-width="1.5"/>
               <!-- In-place update loop badge -->
-              <rect x="46" y="94" width="112" height="16" rx="3" fill="#F4E3DE"/>
-              <text x="54" y="105" font-family="JetBrains Mono, monospace" font-size="8.5" fill="#B8422B">↻ updated in place</text>
+              <rect x="32" y="100" width="128" height="18" rx="3" fill="#E5EDF8"/>
+              <text x="40" y="112.5" font-family="JetBrains Mono, monospace" font-size="9.5" fill="#1D4B8F">updated in place</text>
 
               <!-- Direct arrow -->
-              <path d="M180 69 L212 69" stroke="#B8422B" stroke-width="1.6"/>
-              <polygon points="212,65 220,69 212,73" fill="#B8422B"/>
+              <path d="M184 73 L208 73" stroke="#1D4B8F" stroke-width="1.7"/>
+              <polygon points="208,69 216,73 208,77" fill="#1D4B8F"/>
 
               <!-- Single step summary -->
-              <rect x="228" y="26" width="166" height="86" rx="7" fill="#FBF9F5" stroke="#CFC8BA"/>
-              <text x="242" y="50" font-family="JetBrains Mono, monospace" font-size="11" font-weight="500" fill="#171715">⌥⌘R  or  Drop file</text>
-              <text x="242" y="72" font-family="DM Sans, sans-serif" font-size="11" fill="#4A4843">Builds v6 locally, routes</text>
-              <text x="242" y="88" font-family="DM Sans, sans-serif" font-size="11" fill="#4A4843">to folder, syncs via v3.</text>
+              <rect x="222" y="24" width="182" height="98" rx="7" fill="#FBF9F5" stroke="#C4BDB0"/>
+              <text x="236" y="50" font-family="JetBrains Mono, monospace" font-size="11.5" font-weight="500" fill="#1D4B8F">Opt+Cmd+R or Drop</text>
+              <text x="236" y="75" font-family="DM Sans, sans-serif" font-size="12" fill="#3F3D39">Builds v6 locally, routes</text>
+              <text x="236" y="93" font-family="DM Sans, sans-serif" font-size="12" fill="#3F3D39">to folder, syncs via v3.</text>
+              <text x="236" y="110" font-family="JetBrains Mono, monospace" font-size="9.5" fill="#1E5E42">1 clean doc on tablet</text>
             </svg>
           </div>
           <ul class="compare-list">
@@ -893,11 +899,9 @@
   <!-- ── INTERACTIVE FORMAT PIPELINE ───────────────────────────────── -->
   <section class="block" id="pipeline">
     <div class="wrap">
+      <div class="eyebrow">Format Intelligence</div>
       <div class="section-head">
-        <div>
-          <div class="eyebrow">Format Intelligence</div>
-          <h2>Give Quill whatever you're reading. It picks the right format.</h2>
-        </div>
+        <h2>Give Quill whatever you're reading. It picks the right format.</h2>
         <p class="section-desc">
           Select a format below to see how Quill transforms it on your Mac before it ever touches your reMarkable account.
         </p>
@@ -938,11 +942,9 @@
   <!-- ── WORKFLOW ENTRY POINTS ─────────────────────────────────────── -->
   <section class="block" id="workflow">
     <div class="wrap">
+      <div class="eyebrow">Zero-Friction Workflow</div>
       <div class="section-head">
-        <div>
-          <div class="eyebrow">Zero-Friction Workflow</div>
-          <h2>Four ways in, all wired to the same engine.</h2>
-        </div>
+        <h2>Four ways in, all wired to the same engine.</h2>
         <p class="section-desc">
           Stay in your editor, browser, or Finder. Quill stays out of the way until you send something, then tracks every push in an actionable history menu.
         </p>
@@ -983,11 +985,9 @@
   <!-- ── ARCHITECTURE & PRIVACY ────────────────────────────────────── -->
   <section class="arch-block" id="privacy">
     <div class="wrap">
+      <div class="eyebrow">Architecture &amp; Privacy</div>
       <div class="section-head">
-        <div>
-          <div class="eyebrow">Architecture &amp; Privacy</div>
-          <h2>Direct from your Mac to your tablet. Nobody in the middle.</h2>
-        </div>
+        <h2>Direct from your Mac to your tablet. Nobody in the middle.</h2>
         <p class="section-desc">
           Every document conversion, table rasterization, and sync-v3 upload happens locally on your Mac. There is no Quill backend, no tracking, and no account to create.
         </p>
@@ -997,7 +997,7 @@
         <svg viewBox="0 0 960 190" fill="none" xmlns="http://www.w3.org/2000/svg" role="img">
           <!-- Node 1: Your Mac -->
           <rect x="20" y="28" width="248" height="126" rx="10" fill="#FBF9F5" stroke="#171715" stroke-width="1.4"/>
-          <text x="40" y="54" font-family="JetBrains Mono, monospace" font-size="10.5" fill="#B8422B">01 · LOCAL ON YOUR MAC</text>
+          <text x="40" y="54" font-family="JetBrains Mono, monospace" font-size="10.5" fill="#1D4B8F">01 · LOCAL ON YOUR MAC</text>
           <text x="40" y="80" font-family="Newsreader, Georgia, serif" font-size="20" fill="#171715">Quill.app</text>
           <text x="40" y="104" font-family="DM Sans, sans-serif" font-size="12.5" fill="#4A4843">Article extraction, v6 builder,</text>
           <text x="40" y="122" font-family="DM Sans, sans-serif" font-size="12.5" fill="#4A4843">table pagination, local sync engine</text>
@@ -1027,8 +1027,8 @@
           <text x="728" y="122" font-family="DM Sans, sans-serif" font-size="12.5" fill="#4A4843">app.remarkable.com web viewer.</text>
 
           <!-- Absent Middleman Callout -->
-          <rect x="330" y="164" width="320" height="22" rx="4" fill="#F4E3DE"/>
-          <text x="348" y="179" font-family="JetBrains Mono, monospace" font-size="10.5" fill="#B8422B">No Quill servers · No telemetry · No third-party cloud</text>
+          <rect x="315" y="164" width="350" height="22" rx="4" fill="#E1EFE8"/>
+          <text x="334" y="179" font-family="JetBrains Mono, monospace" font-size="10.5" fill="#1E5E42">No Quill servers · No telemetry · No third-party cloud</text>
         </svg>
       </div>
 
@@ -1102,7 +1102,7 @@
           <rect x="12" y="16" width="188" height="218" rx="8" fill="#FFFFFF" stroke="#CFC8BA"/>
           <text x="26" y="38" font-family="JetBrains Mono, monospace" font-size="9.5" fill="#78756E">design-notes.md</text>
           <line x1="12" y1="48" x2="200" y2="48" stroke="#ECE8DF"/>
-          <text x="26" y="70" font-family="JetBrains Mono, monospace" font-size="10.5" fill="#B8422B"># Sync v3 Plan</text>
+          <text x="26" y="70" font-family="JetBrains Mono, monospace" font-size="10.5" fill="#1D4B8F"># Sync v3 Plan</text>
           <text x="26" y="92" font-family="JetBrains Mono, monospace" font-size="9.5" fill="#4A4843">- Flip deleted flag</text>
           <text x="26" y="108" font-family="JetBrains Mono, monospace" font-size="9.5" fill="#4A4843">- Republish hash tree</text>
           <text x="26" y="132" font-family="JetBrains Mono, monospace" font-size="9" fill="#78756E">| Step | Status |</text>
@@ -1112,8 +1112,8 @@
           <rect x="26" y="198" width="96" height="20" rx="4" fill="#F4F1EA"/>
           <text x="35" y="211" font-family="JetBrains Mono, monospace" font-size="9" fill="#171715">Plain Markdown</text>
 
-          <path d="M210 125 L246 125" stroke="#B8422B" stroke-width="1.8"/>
-          <polygon points="246,120 255,125 246,130" fill="#B8422B"/>
+          <path d="M210 125 L246 125" stroke="#1D4B8F" stroke-width="1.8"/>
+          <polygon points="246,120 255,125 246,130" fill="#1D4B8F"/>
 
           <rect x="262" y="16" width="186" height="218" rx="10" fill="#FBF9F4" stroke="#171715" stroke-width="1.4"/>
           <text x="278" y="38" font-family="JetBrains Mono, monospace" font-size="9" fill="#2D6A4F">NATIVE v6 NOTEBOOK</text>
@@ -1154,7 +1154,7 @@
           <rect x="22" y="56" width="168" height="16" rx="2" fill="#ECE8DF"/>
           <rect x="22" y="80" width="112" height="114" rx="3" fill="#FBF9F5" stroke="#DCD7CC"/>
           <rect x="140" y="80" width="50" height="54" rx="3" fill="#F4E3DE"/>
-          <text x="151" y="110" font-family="JetBrains Mono, monospace" font-size="8" fill="#B8422B">AD</text>
+          <text x="151" y="110" font-family="JetBrains Mono, monospace" font-size="8" fill="#1D4B8F">AD</text>
           <rect x="140" y="142" width="50" height="52" rx="3" fill="#ECE8DF"/>
           <line x1="30" y1="96" x2="122" y2="96" stroke="#171715" stroke-width="2"/>
           <line x1="30" y1="112" x2="116" y2="112" stroke="#9E9A91" stroke-width="1.5"/>
@@ -1163,8 +1163,8 @@
           <rect x="22" y="202" width="168" height="22" rx="3" fill="#ECE8DF"/>
           <text x="58" y="216" font-family="JetBrains Mono, monospace" font-size="8" fill="#78756E">cookie banner</text>
 
-          <path d="M210 125 L246 125" stroke="#B8422B" stroke-width="1.8"/>
-          <polygon points="246,120 255,125 246,130" fill="#B8422B"/>
+          <path d="M210 125 L246 125" stroke="#1D4B8F" stroke-width="1.8"/>
+          <polygon points="246,120 255,125 246,130" fill="#1D4B8F"/>
 
           <rect x="262" y="16" width="186" height="218" rx="10" fill="#FBF9F4" stroke="#171715" stroke-width="1.4"/>
           <text x="278" y="38" font-family="JetBrains Mono, monospace" font-size="9" fill="#2D6A4F">EXTRACTED ARTICLE</text>
@@ -1194,7 +1194,7 @@
         <svg viewBox="0 0 460 250" fill="none" xmlns="http://www.w3.org/2000/svg">
           <rect x="12" y="34" width="188" height="182" rx="8" fill="#FFFFFF" stroke="#CFC8BA"/>
           <rect x="28" y="52" width="44" height="18" rx="4" fill="#F4E3DE"/>
-          <text x="38" y="64" font-family="JetBrains Mono, monospace" font-size="9.5" fill="#B8422B">PDF</text>
+          <text x="38" y="64" font-family="JetBrains Mono, monospace" font-size="9.5" fill="#1D4B8F">PDF</text>
           <rect x="78" y="52" width="52" height="18" rx="4" fill="#E4ECF8"/>
           <text x="88" y="64" font-family="JetBrains Mono, monospace" font-size="9.5" fill="#23509E">EPUB</text>
           <text x="28" y="96" font-family="Newsreader, Georgia, serif" font-size="15" fill="#171715">Attention Is All</text>
@@ -1204,8 +1204,8 @@
           <rect x="28" y="182" width="144" height="18" rx="4" fill="#F4F1EA"/>
           <text x="36" y="194" font-family="JetBrains Mono, monospace" font-size="8.5" fill="#4A4843">raw bytes · no reflow</text>
 
-          <path d="M210 125 L246 125" stroke="#B8422B" stroke-width="1.8"/>
-          <polygon points="246,120 255,125 246,130" fill="#B8422B"/>
+          <path d="M210 125 L246 125" stroke="#1D4B8F" stroke-width="1.8"/>
+          <polygon points="246,120 255,125 246,130" fill="#1D4B8F"/>
 
           <rect x="262" y="16" width="186" height="218" rx="10" fill="#FBF9F4" stroke="#171715" stroke-width="1.4"/>
           <text x="278" y="38" font-family="JetBrains Mono, monospace" font-size="9" fill="#2D6A4F">CPAGES v2 READY</text>
@@ -1240,7 +1240,7 @@
           <rect x="20" y="34" width="166" height="84" rx="8" fill="#F4F1EA" stroke="#CFC8BA" stroke-dasharray="4 3"/>
           <text x="34" y="58" font-family="JetBrains Mono, monospace" font-size="9" fill="#78756E">PREVIOUS VERSION</text>
           <text x="34" y="80" font-family="Newsreader, Georgia, serif" font-size="14" fill="#78756E" text-decoration="line-through">Q4 Spec (v1)</text>
-          <text x="34" y="102" font-family="JetBrains Mono, monospace" font-size="9" fill="#B8422B">deleted: true (sync v3)</text>
+          <text x="34" y="102" font-family="JetBrains Mono, monospace" font-size="9" fill="#1D4B8F">deleted: true (sync v3)</text>
 
           <!-- New version crisp -->
           <rect x="20" y="138" width="166" height="84" rx="8" fill="#FFFFFF" stroke="#171715" stroke-width="1.3"/>
@@ -1250,8 +1250,8 @@
 
           <!-- Merge arrows -->
           <path d="M186 76 C220 76, 218 125, 250 125" stroke="#C8C1B4" stroke-width="1.5" stroke-dasharray="3 3"/>
-          <path d="M186 180 C220 180, 218 125, 250 125" stroke="#B8422B" stroke-width="1.8"/>
-          <polygon points="250,120 259,125 250,130" fill="#B8422B"/>
+          <path d="M186 180 C220 180, 218 125, 250 125" stroke="#1D4B8F" stroke-width="1.8"/>
+          <polygon points="250,120 259,125 250,130" fill="#1D4B8F"/>
 
           <!-- Clean tablet library -->
           <rect x="266" y="28" width="180" height="194" rx="10" fill="#FBF9F4" stroke="#171715" stroke-width="1.4"/>
