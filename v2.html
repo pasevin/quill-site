@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quill — Markdown to reMarkable, natively</title>
+<meta name="description" content="Native macOS menu-bar app for reMarkable. Editable v6 notebooks, clean web articles, raw PDFs & EPUBs. Updates in place. Works on free accounts.">
+<link rel="icon" type="image/png" href="assets/quill-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #F4F1EA;
+    --paper-light: #FAF8F3;
+    --paper-card: #FFFFFF;
+    --ink: #161614;
+    --ink-soft: #4A4842;
+    --ink-muted: #6E6B63;
+    --rule: #DDD7CB;
+    --cobalt: #1D4B8F;
+    --cobalt-soft: #E5EDF8;
+    --sage: #1E5E42;
+    --sage-soft: #E1EFE8;
+
+    --serif: "Newsreader", Georgia, serif;
+    --sans: "DM Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+    --mono: "JetBrains Mono", "SF Mono", ui-monospace, monospace;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; background: var(--paper); color: var(--ink); }
+  body {
+    font-family: var(--sans);
+    background:
+      radial-gradient(ellipse 90% 60% at 72% 28%, #FFFFFF 0%, rgba(244,241,234,0) 68%),
+      radial-gradient(circle at 18% 82%, #EAE5D9 0%, rgba(244,241,234,0) 55%),
+      var(--paper);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  /* Architectural perspective floor grid in hero background */
+  .studio-grid {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background-image:
+      linear-gradient(to right, rgba(22,22,20,0.035) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(22,22,20,0.035) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(ellipse 80% 70% at 65% 35%, black 20%, transparent 80%);
+    -webkit-mask-image: radial-gradient(ellipse 80% 70% at 65% 35%, black 20%, transparent 80%);
+  }
+
+  .wrap {
+    position: relative;
+    z-index: 2;
+    max-width: 1160px;
+    margin: 0 auto;
+    padding: 0 32px;
+  }
+
+  /* ── Top Bar ────────────────────────────────────────────────────── */
+  header {
+    position: relative;
+    z-index: 10;
+    padding: 22px 0;
+  }
+  .nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    color: var(--ink);
+  }
+  .brand-mark {
+    width: 28px;
+    height: 28px;
+    border-radius: 7px;
+    background: var(--ink);
+    color: var(--paper-light);
+    display: grid;
+    place-items: center;
+  }
+  .brand span {
+    font-family: var(--serif);
+    font-size: 21px;
+    font-weight: 500;
+  }
+  .nav-right {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .pill {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--ink-soft);
+    background: rgba(255,255,255,0.75);
+    border: 1px solid var(--rule);
+    padding: 6px 12px;
+    border-radius: 999px;
+    backdrop-filter: blur(8px);
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .pill .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--cobalt);
+  }
+
+  /* ── Hero + 3D reMarkable Paper Pro Stage ───────────────────────── */
+  .hero {
+    min-height: calc(100vh - 80px);
+    display: flex;
+    align-items: center;
+    padding: 24px 0 64px;
+  }
+  .hero-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+    gap: 56px;
+    align-items: center;
+    width: 100%;
+  }
+
+  .kicker {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--cobalt);
+    margin-bottom: 18px;
+  }
+  h1 {
+    font-family: var(--serif);
+    font-size: clamp(44px, 5.2vw, 66px);
+    font-weight: 400;
+    line-height: 1.04;
+    letter-spacing: -0.028em;
+    color: var(--ink);
+    margin-bottom: 20px;
+    text-wrap: balance;
+  }
+  h1 em {
+    font-style: italic;
+    color: var(--cobalt);
+  }
+  .sub {
+    font-size: 18px;
+    line-height: 1.55;
+    color: var(--ink-soft);
+    max-width: 410px;
+    margin-bottom: 32px;
+    text-wrap: pretty;
+  }
+
+  /* Interactive Mode Switcher (drives the 3D tablet screen) */
+  .mode-bar {
+    display: inline-flex;
+    background: rgba(255,255,255,0.72);
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    padding: 4px;
+    gap: 4px;
+    margin-bottom: 24px;
+    backdrop-filter: blur(8px);
+  }
+  .mode-btn {
+    appearance: none;
+    border: none;
+    background: transparent;
+    padding: 8px 14px;
+    border-radius: 7px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink-soft);
+    cursor: pointer;
+    transition: background 0.16s ease, color 0.16s ease, box-shadow 0.16s ease;
+  }
+  .mode-btn:hover { color: var(--ink); }
+  .mode-btn[aria-pressed="true"] {
+    background: var(--ink);
+    color: var(--paper-light);
+    box-shadow: 0 2px 8px rgba(22,22,20,0.16);
+  }
+
+  .hero-foot {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    flex-wrap: wrap;
+    font-size: 13.5px;
+    color: var(--ink-muted);
+  }
+  .hero-foot strong { color: var(--ink); font-weight: 500; }
+  kbd {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--ink);
+    background: #FFFFFF;
+    border: 1px solid #CCC6B9;
+    border-bottom-width: 2px;
+    border-radius: 5px;
+    padding: 2px 7px;
+  }
+
+  /* ── 3D reMarkable Paper Pro Hardware Scene ─────────────────────── */
+  .stage-wrap {
+    perspective: 1600px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 28px 16px;
+    position: relative;
+  }
+  /* Ambient soft halo behind tablet */
+  .stage-wrap::before {
+    content: "";
+    position: absolute;
+    width: 440px;
+    height: 440px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(29,75,143,0.09) 0%, rgba(244,241,234,0) 70%);
+    filter: blur(18px);
+    z-index: 0;
+  }
+
+  .tablet-rig {
+    position: relative;
+    z-index: 2;
+    transform-style: preserve-3d;
+    transform: rotateX(11deg) rotateY(-15deg) rotateZ(1.5deg);
+    transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: transform;
+  }
+
+  /* Real reMarkable Paper Pro proportions: 196.6 x 274.1 mm (~1 : 1.394) */
+  .rm-tablet {
+    position: relative;
+    width: 348px;
+    height: 486px;
+    border-radius: 14px;
+    /* Pale warm-gray textured glass front bezel (Paper Pro authentic) */
+    background: linear-gradient(145deg, #EFECE5 0%, #E5E1D8 60%, #DDD8CD 100%);
+    padding: 15px 15px 38px 15px; /* slim top/sides, authentic wider bottom chin */
+    box-shadow:
+      /* Crisp silver anodized aluminum outer chamfer */
+      inset 0 0 0 1.5px rgba(255,255,255,0.85),
+      inset 0 0 0 3px #CFCAC0,
+      /* 3D extruded corrugated aluminum edge (right + bottom thickness) */
+      2px 2px 0 #C8C4BC,
+      4px 3px 0 #B0ACA3,
+      6px 5px 0 #CECAC2,
+      8px 6px 0 #A7A39A,
+      10px 8px 0 #C6C2BA,
+      /* Realistic studio contact & cast shadow */
+      24px 36px 52px -12px rgba(22, 22, 20, 0.24),
+      8px 14px 20px -8px rgba(22, 22, 20, 0.14);
+    transform-style: preserve-3d;
+  }
+
+  /* Top-left silver power/sleep button */
+  .rm-power {
+    position: absolute;
+    top: -3px;
+    left: 28px;
+    width: 24px;
+    height: 3px;
+    border-radius: 2px 2px 0 0;
+    background: linear-gradient(90deg, #B5B1A8, #DCD8CF, #A8A49B);
+  }
+
+  /* Canvas Color 11.8" 4:3 e-ink display */
+  .rm-screen {
+    width: 100%;
+    height: 100%;
+    border-radius: 4px;
+    background:
+      linear-gradient(160deg, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0) 42%),
+      #F6F4EE;
+    box-shadow:
+      inset 0 0 0 1px rgba(22,22,20,0.12),
+      inset 0 2px 6px rgba(22,22,20,0.04);
+    padding: 18px 20px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+  }
+  /* Subtle e-ink paper texture on screen */
+  .rm-screen::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.04;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 160 160' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+  }
+
+  .rm-topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 10px;
+    margin-bottom: 14px;
+    border-bottom: 1px solid #E4DFD4;
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--ink-muted);
+  }
+  .rm-topbar .tag {
+    color: var(--sage);
+    background: var(--sage-soft);
+    padding: 2px 6px;
+    border-radius: 3px;
+  }
+
+  .rm-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  .rm-body h3 {
+    font-family: var(--serif);
+    font-size: 21px;
+    font-weight: 500;
+    line-height: 1.18;
+    color: var(--ink);
+    margin-bottom: 8px;
+  }
+  .rm-body p {
+    font-size: 11.5px;
+    line-height: 1.55;
+    color: #32312E;
+    margin-bottom: 12px;
+  }
+  .rm-mini-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 10px;
+    margin: 4px 0 14px;
+    background: #EFECE4;
+    border: 1px solid #D8D2C5;
+  }
+  .rm-mini-table th, .rm-mini-table td {
+    text-align: left;
+    padding: 5px 8px;
+    border-bottom: 1px solid #DCD6C9;
+  }
+  .rm-mini-table th {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--ink);
+    background: #E8E4DA;
+  }
+  .rm-mini-table tr:last-child td { border-bottom: none; }
+
+  .rm-highlight {
+    background: rgba(29, 75, 143, 0.13);
+    border-bottom: 1.5px solid rgba(29, 75, 143, 0.55);
+    padding: 0 2px;
+  }
+  .rm-note {
+    margin-top: auto;
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 12.5px;
+    color: var(--cobalt);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 10px;
+    border-top: 1px dashed #DDD7CB;
+  }
+  .rm-note span.pg {
+    font-family: var(--mono);
+    font-style: normal;
+    font-size: 9px;
+    color: var(--ink-muted);
+  }
+
+  /* Magnetic Marker Plus resting along right corrugated edge */
+  .rm-marker {
+    position: absolute;
+    top: 64px;
+    right: -28px;
+    width: 15px;
+    height: 318px;
+    transform: translateZ(4px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    filter: drop-shadow(8px 14px 12px rgba(22,22,20,0.22));
+  }
+  .marker-eraser {
+    width: 13px;
+    height: 22px;
+    border-radius: 5px 5px 1px 1px;
+    background: linear-gradient(90deg, #3A3A38 0%, #555450 40%, #262624 100%);
+  }
+  .marker-ring {
+    width: 14px;
+    height: 3px;
+    background: linear-gradient(90deg, #8F8B82, #D4D0C7, #6E6B63);
+  }
+  .marker-body {
+    width: 14px;
+    flex: 1;
+    background: linear-gradient(90deg, #2D2D2B 0%, #444340 32%, #1E1E1C 78%, #151514 100%);
+    border-radius: 0 0 2px 2px;
+  }
+  .marker-cone {
+    width: 0;
+    height: 0;
+    border-left: 7px solid transparent;
+    border-right: 7px solid transparent;
+    border-top: 24px solid #262624;
+  }
+  .marker-nib {
+    width: 2.5px;
+    height: 5px;
+    background: #4E4D49;
+    border-radius: 0 0 2px 2px;
+    margin-top: -2px;
+  }
+
+  /* Floating macOS Menu-Bar Chip in 3D foreground */
+  .mac-chip {
+    position: absolute;
+    left: -58px;
+    bottom: 54px;
+    transform: translateZ(42px);
+    background: rgba(255, 255, 255, 0.94);
+    border: 1px solid #D3CEC2;
+    border-radius: 12px;
+    padding: 12px 14px;
+    width: 214px;
+    box-shadow: 0 18px 34px -10px rgba(22,22,20,0.20);
+    backdrop-filter: blur(12px);
+  }
+  .mac-chip-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .mac-chip-top .key {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--cobalt);
+    background: var(--cobalt-soft);
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+  .mac-chip-row {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--sage);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .mac-chip-row::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--sage);
+  }
+
+  /* ── Compact Value Band (3 Sharp Ideas, Zero Fluff) ─────────────── */
+  .pillars {
+    padding: 64px 0;
+    border-top: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+  }
+  .pillar-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 36px;
+  }
+  .pillar-num {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--cobalt);
+    margin-bottom: 10px;
+  }
+  .pillar h2 {
+    font-family: var(--serif);
+    font-size: 26px;
+    font-weight: 400;
+    line-height: 1.18;
+    margin-bottom: 8px;
+    color: var(--ink);
+  }
+  .pillar p {
+    font-size: 14.5px;
+    line-height: 1.55;
+    color: var(--ink-soft);
+  }
+
+  /* ── Four Entry Points (Single Scannable Strip) ─────────────────── */
+  .triggers {
+    padding: 48px 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .trigger-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+  }
+  .trigger-item {
+    background: rgba(255,255,255,0.65);
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    padding: 16px 18px;
+  }
+  .trigger-item .code {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--cobalt);
+    margin-bottom: 6px;
+    display: block;
+  }
+  .trigger-item .name {
+    font-size: 14.5px;
+    font-weight: 600;
+    color: var(--ink);
+    display: block;
+    margin-bottom: 2px;
+  }
+  .trigger-item .hint {
+    font-size: 13px;
+    color: var(--ink-muted);
+  }
+
+  /* ── Minimal Footer ─────────────────────────────────────────────── */
+  footer {
+    padding: 28px 0 40px;
+    font-size: 13px;
+    color: var(--ink-muted);
+  }
+  .foot {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  footer a {
+    color: var(--ink-soft);
+    text-decoration: none;
+    border-bottom: 1px solid var(--rule);
+  }
+  footer a:hover { color: var(--ink); border-color: var(--ink); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tablet-rig { transition: none; }
+  }
+
+  @media (max-width: 960px) {
+    .hero { min-height: auto; padding: 36px 0 56px; }
+    .hero-grid { grid-template-columns: 1fr; gap: 44px; }
+    .pillar-grid { grid-template-columns: 1fr; gap: 28px; }
+    .trigger-row { grid-template-columns: 1fr 1fr; }
+    .mac-chip { left: -12px; bottom: 20px; width: 196px; }
+  }
+  @media (max-width: 540px) {
+    .wrap { padding: 0 20px; }
+    .rm-tablet { width: 286px; height: 400px; padding: 12px 12px 30px 12px; }
+    .rm-marker { right: -22px; height: 256px; }
+    .trigger-row { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="studio-grid" aria-hidden="true"></div>
+
+<header>
+  <div class="wrap nav">
+    <a class="brand" href="#">
+      <span class="brand-mark" aria-hidden="true">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M15.807.531c-.174-.177-.41-.289-.64-.363a3.765 3.765 0 0 0-.833-.15c-.62-.049-1.394 0-2.252.175C10.365.545 8.264 1.415 6.315 3.1c-1.95 1.686-3.168 3.724-3.758 5.423-.294.847-.44 1.634-.429 2.268.005.316.05.62.154.88q.025.061.056.122A68 68 0 0 0 .08 15.198a.528.528 0 0 0 .157.72.504.504 0 0 0 .705-.16 67.6 67.6 0 0 1 2.158-3.26c.285.141.616.195.958.182.513-.02 1.098-.188 1.723-.49 1.25-.605 2.744-1.787 4.303-3.642l1.518-1.55a.53.53 0 0 0 0-.739l-.729-.744 1.311.209a.5.5 0 0 0 .443-.15l.663-.684c.663-.68 1.292-1.325 1.763-1.892.314-.378.585-.752.754-1.107.163-.345.278-.773.112-1.188a.5.5 0 0 0-.112-.172"/>
+        </svg>
+      </span>
+      <span>Quill</span>
+    </a>
+    <div class="nav-right">
+      <span class="pill"><span class="dot"></span>macOS · Coming soon</span>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero">
+    <div class="hero-grid">
+      <div>
+        <div class="kicker">macOS → reMarkable</div>
+        <h1>Markdown to your reMarkable, <em>still editable.</em></h1>
+        <p class="sub">
+          Stop exporting frozen PDFs. Quill sends Markdown as native v6 notebooks, strips web articles for e-ink, and passes PDFs &amp; EPUBs straight through — right from your menu bar.
+        </p>
+
+        <div class="mode-bar" role="group" aria-label="Preview tablet output">
+          <button class="mode-btn" aria-pressed="true" data-screen="markdown">.md Notebook</button>
+          <button class="mode-btn" aria-pressed="false" data-screen="article">Web Article</button>
+          <button class="mode-btn" aria-pressed="false" data-screen="pdf">Raw PDF</button>
+        </div>
+
+        <div class="hero-foot">
+          <span><strong>Free accounts supported</strong> · No Connect needed</span>
+          <span>Shortcut <kbd>⌥⌘R</kbd></span>
+        </div>
+      </div>
+
+      <!-- 3D reMarkable Paper Pro Hardware Visualization -->
+      <div class="stage-wrap" id="stage-wrap">
+        <div class="tablet-rig" id="tablet-rig">
+          <div class="rm-tablet" aria-label="3D visualization of a reMarkable Paper Pro tablet showing a live Quill document">
+            <div class="rm-power"></div>
+
+            <div class="rm-screen">
+              <div class="rm-topbar">
+                <span id="scr-folder">Architecture / Specs</span>
+                <span class="tag" id="scr-tag">v6 editable</span>
+              </div>
+              <div class="rm-body" id="scr-body"></div>
+            </div>
+
+            <!-- Magnetic Marker Plus on the right corrugated edge -->
+            <div class="rm-marker" aria-hidden="true">
+              <div class="marker-eraser"></div>
+              <div class="marker-ring"></div>
+              <div class="marker-body"></div>
+              <div class="marker-cone"></div>
+              <div class="marker-nib"></div>
+            </div>
+
+            <!-- Floating macOS Menu-Bar Sync Chip -->
+            <div class="mac-chip" aria-hidden="true">
+              <div class="mac-chip-top">
+                <span>Push clipboard</span>
+                <span class="key">⌥⌘R</span>
+              </div>
+              <div class="mac-chip-row" id="chip-status">Synced in place · sync v3</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 Core Value Pillars -->
+  <section class="pillars" aria-label="Core value">
+    <div class="pillar-grid">
+      <div class="pillar">
+        <div class="pillar-num">01</div>
+        <h2>Real notebooks, not frozen PDFs.</h2>
+        <p>Markdown compiles locally into native v6 typed text — editable on your tablet, with tables auto-paginated so they never clip.</p>
+      </div>
+      <div class="pillar">
+        <div class="pillar-num">02</div>
+        <h2>Updates in place.</h2>
+        <p>Re-push a revised note and Quill replaces the old version cleanly via sync v3. No more <em>Draft_v4_final</em> clutter.</p>
+      </div>
+      <div class="pillar">
+        <div class="pillar-num">03</div>
+        <h2>Direct sync. Zero middleman.</h2>
+        <p>Built on your Mac, synced straight to your reMarkable account. Works on free plans — no Quill server, no Connect subscription.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 Entry Points -->
+  <section class="triggers" aria-label="Ways to send">
+    <div class="trigger-row">
+      <div class="trigger-item">
+        <span class="code">⌥⌘R</span>
+        <span class="name">Global hotkey</span>
+        <span class="hint">Push clipboard anywhere (customizable)</span>
+      </div>
+      <div class="trigger-item">
+        <span class="code">Menu Bar</span>
+        <span class="name">Folder picker</span>
+        <span class="hint">Route to any cloud folder + History</span>
+      </div>
+      <div class="trigger-item">
+        <span class="code">~/Quill Inbox</span>
+        <span class="name">Watched folder</span>
+        <span class="hint">Drop .md, .html, .pdf, .epub to auto-sync</span>
+      </div>
+      <div class="trigger-item">
+        <span class="code">Right-Click</span>
+        <span class="name">Finder Quick Action</span>
+        <span class="hint">Send files or selected text from any app</span>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="foot">
+      <span>Quill for macOS · Independent project, not affiliated with reMarkable AS</span>
+      <span><a href="./">View v1</a> · <a href="https://github.com/pasevin">GitHub</a></span>
+    </div>
+  </footer>
+</main>
+
+<script>
+  const SCREENS = {
+    markdown: {
+      folder: "Architecture / Specs",
+      tag: "v6 editable",
+      chip: "Synced in place · sync v3",
+      html: `
+        <h3>Q4 Sync Architecture</h3>
+        <p>Markdown arrives as <span class="rm-highlight">native typed text</span> you can edit on the tablet — not a flat image.</p>
+        <table class="rm-mini-table">
+          <thead><tr><th>Input</th><th>Tablet Result</th></tr></thead>
+          <tbody>
+            <tr><td>.md / .txt</td><td>Editable v6 notebook</td></tr>
+            <tr><td>GFM Table</td><td>Paginated crisp PNG</td></tr>
+          </tbody>
+        </table>
+        <p>Re-pushing updates the same document automatically.</p>
+        <div class="rm-note"><span>stylus notes stay clean on top</span><span class="pg">1 / 2</span></div>
+      `
+    },
+    article: {
+      folder: "Reading List",
+      tag: "article extracted",
+      chip: "Stripped ads & chrome · sync v3",
+      html: `
+        <h3>On Quiet Software</h3>
+        <p>Paste any bare URL and hit <span class="rm-highlight">⌥⌘R</span>. Quill fetches the page, strips navbars, popups, and sidebars, and sends calm e-ink prose.</p>
+        <p>No browser extension. No broken print-to-PDF margins. Just the essay, formatted for Paper Pro.</p>
+        <div class="rm-note"><span>6 min read · zero clutter</span><span class="pg">1 / 4</span></div>
+      `
+    },
+    pdf: {
+      folder: "Papers",
+      tag: "raw cPages v2",
+      chip: "Original bytes · no conversion",
+      html: `
+        <h3>Attention Is All You Need</h3>
+        <p>PDFs and EPUBs upload untouched via <span class="rm-highlight">raw sync v3</span> with current cPages metadata.</p>
+        <table class="rm-mini-table">
+          <thead><tr><th>Check</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td>Paper Pro &amp; rM2</td><td>Exact layout</td></tr>
+            <tr><td>Web viewer</td><td>Opens cleanly</td></tr>
+          </tbody>
+        </table>
+        <div class="rm-note"><span>2.4 MB · sha256 verified</span><span class="pg">1 / 15</span></div>
+      `
+    }
+  };
+
+  const folderEl = document.getElementById("scr-folder");
+  const tagEl = document.getElementById("scr-tag");
+  const bodyEl = document.getElementById("scr-body");
+  const chipEl = document.getElementById("chip-status");
+  const btns = document.querySelectorAll(".mode-btn");
+
+  function setScreen(key) {
+    const s = SCREENS[key];
+    if (!s) return;
+    btns.forEach(b => b.setAttribute("aria-pressed", String(b.dataset.screen === key)));
+    folderEl.textContent = s.folder;
+    tagEl.textContent = s.tag;
+    bodyEl.innerHTML = s.html;
+    chipEl.textContent = s.chip;
+  }
+
+  btns.forEach(b => b.addEventListener("click", () => setScreen(b.dataset.screen)));
+  setScreen("markdown");
+
+  // Subtle 3D mouse-parallax tilt (disabled under prefers-reduced-motion)
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const stage = document.getElementById("stage-wrap");
+  const rig = document.getElementById("tablet-rig");
+  if (!reduceMotion && stage && rig) {
+    stage.addEventListener("mousemove", (e) => {
+      const r = stage.getBoundingClientRect();
+      const x = (e.clientX - r.left) / r.width - 0.5;
+      const y = (e.clientY - r.top) / r.height - 0.5;
+      rig.style.transform = `rotateX(${11 - y * 10}deg) rotateY(${-15 + x * 12}deg) rotateZ(1.5deg)`;
+    });
+    stage.addEventListener("mouseleave", () => {
+      rig.style.transform = "rotateX(11deg) rotateY(-15deg) rotateZ(1.5deg)";
+    });
+  }
+</script>
+
+</body>
+</html>
