@@ -585,11 +585,26 @@ const qEdgesMat = new THREE.LineBasicMaterial({ color: '#181715', transparent: t
 const qEdges = new THREE.LineSegments(new THREE.EdgesGeometry(qSlabGeo, 26), qEdgesMat);
 quillGroup.add(qEdges);
 
-// Outer wireframe drafting bounding box (tightened around app-icon scale)
-const cageGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(1.08, 1.08, 0.28));
+// Outer wireframe drafting bounding cage — rounded identically to the Quill squircle
+const cage = new THREE.Group();
 const cageMat = new THREE.LineDashedMaterial({ color: '#1D4E89', dashSize: 0.045, gapSize: 0.04, transparent: true, opacity: 0.45 });
-const cage = new THREE.LineSegments(cageGeo, cageMat);
-cage.computeLineDistances();
+const cageOutlinePts = roundedRectShape(1.08, 1.08, 0.245).getSpacedPoints(96);
+[-0.14, 0.14].forEach((zOff) => {
+  const pts3 = cageOutlinePts.map((p) => new THREE.Vector3(p.x, p.y, zOff));
+  const loop = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts3), cageMat);
+  loop.computeLineDistances();
+  cage.add(loop);
+});
+// 4 subtle dashed depth rails linking the front & back rounded frames at 45° corners
+const rOff = 0.54 - 0.245 + 0.245 * Math.SQRT1_2;
+[[-rOff, -rOff], [rOff, -rOff], [rOff, rOff], [-rOff, rOff]].forEach(([cx, cy]) => {
+  const seg = new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(cx, cy, -0.14), new THREE.Vector3(cx, cy, 0.14)]),
+    cageMat
+  );
+  seg.computeLineDistances();
+  cage.add(seg);
+});
 quillGroup.add(cage);
 
 // Original Quill app feather icon (assets/quill-icon.png) at natural crisp scale
