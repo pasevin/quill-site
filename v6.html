@@ -220,7 +220,7 @@
 </header>
 
 <footer>
-  <h1>A macOS menu-bar utility that sends <strong>Markdown, web articles, PDFs, and EPUBs</strong> directly to your reMarkable.</h1>
+  <h1>A macOS menu-bar utility for you and your <strong>AI agents</strong> to send <strong>Markdown, web articles, PDFs, and EPUBs</strong> directly to your reMarkable.</h1>
   <div class="controls">
     <button class="key-btn" id="send-btn" type="button">⌥⌘R</button>
     <span>·</span>
@@ -293,56 +293,61 @@ function drawSchematicBackground(t, pulse) {
     }
   }
 
-  // Anchor coordinates aligned to Quill (left-center) and reMarkable (right)
-  const qx = bgW * 0.39 + mouseNX * -12;
+  // Anchor coordinates aligned to Swarm (left), Quill (center-left), and reMarkable (right)
+  const sx = bgW * 0.16 + mouseNX * -14;
+  const qx = bgW * 0.42 + mouseNX * -10;
   const qy = bgH * 0.48 + mouseNY * -10;
   const rx = bgW * 0.74 + mouseNX * -6;
   const ry = bgH * 0.48 + mouseNY * -6;
 
   // Recursive fractal compass geometry centered behind the Quill Entity
-  drawFractalRosette(qx, qy, Math.min(bgW, bgH) * 0.31, 6, t * 0.045, 0.095 + pulse * 0.04);
+  drawFractalRosette(qx, qy, Math.min(bgW, bgH) * 0.27, 6, t * 0.045, 0.085 + pulse * 0.04);
 
   // Fine technical crosshairs & horizontal/vertical datum lines
-  bctx.strokeStyle = 'rgba(24, 23, 21, 0.09)';
+  bctx.strokeStyle = 'rgba(24, 23, 21, 0.085)';
   bctx.lineWidth = 0.8;
   bctx.setLineDash([6, 6]);
   bctx.beginPath();
   bctx.moveTo(36, qy); bctx.lineTo(bgW - 36, qy);
+  bctx.moveTo(sx, 62); bctx.lineTo(sx, bgH - 62);
   bctx.moveTo(qx, 42); bctx.lineTo(qx, bgH - 42);
   bctx.moveTo(rx, 42); bctx.lineTo(rx, bgH - 42);
   bctx.stroke();
 
   // Concentric dotted arcs radiating from Quill toward the tablet
   bctx.setLineDash([2, 6]);
-  bctx.strokeStyle = 'rgba(29, 78, 137, 0.16)';
-  [165, 235, 310].forEach((r, i) => {
-    const start = -0.65 + Math.sin(t * 0.3 + i) * 0.08;
-    const end = 0.65 + Math.sin(t * 0.3 + i) * 0.08;
+  bctx.strokeStyle = 'rgba(29, 78, 137, 0.15)';
+  [145, 210, 280].forEach((r, i) => {
+    const start = -0.62 + Math.sin(t * 0.3 + i) * 0.08;
+    const end = 0.62 + Math.sin(t * 0.3 + i) * 0.08;
     bctx.beginPath();
     bctx.arc(qx, qy, r, start, end);
     bctx.stroke();
   });
 
-  // Crisp schematic dimension line + arrowheads between Quill & reMarkable
+  // Crisp schematic dimension line + arrowheads across Agents → Quill → reMarkable
   const dimY = Math.min(bgH - 130, qy + Math.min(bgW, bgH) * 0.27);
   bctx.setLineDash([]);
   bctx.strokeStyle = 'rgba(24, 23, 21, 0.22)';
   bctx.lineWidth = 0.9;
   bctx.beginPath();
-  bctx.moveTo(qx, dimY); bctx.lineTo(rx, dimY);
+  bctx.moveTo(sx, dimY); bctx.lineTo(rx, dimY);
+  bctx.moveTo(sx, dimY - 5); bctx.lineTo(sx, dimY + 5);
   bctx.moveTo(qx, dimY - 6); bctx.lineTo(qx, dimY + 6);
   bctx.moveTo(rx, dimY - 6); bctx.lineTo(rx, dimY + 6);
-  // Left & right arrows
-  bctx.moveTo(qx + 8, dimY - 3.5); bctx.lineTo(qx, dimY); bctx.lineTo(qx + 8, dimY + 3.5);
+  // Directional arrows
+  bctx.moveTo(qx - 8, dimY - 3.5); bctx.lineTo(qx, dimY); bctx.lineTo(qx - 8, dimY + 3.5);
   bctx.moveTo(rx - 8, dimY - 3.5); bctx.lineTo(rx, dimY); bctx.lineTo(rx - 8, dimY + 3.5);
   bctx.stroke();
 
   // Small clean labels on the drafting sheet
   bctx.fillStyle = 'rgba(24, 23, 21, 0.42)';
   bctx.font = '400 10px "JetBrains Mono", monospace';
+  bctx.fillText('AGENTS', sx - 20, dimY + 18);
   bctx.fillText('QUILL', qx - 16, dimY + 18);
   bctx.fillText('REMARKABLE', rx - 32, dimY + 18);
   bctx.fillStyle = 'rgba(29, 78, 137, 0.68)';
+  bctx.fillText('→', (sx + qx) * 0.5 - 4, dimY - 8);
   bctx.fillText('→', (qx + rx) * 0.5 - 4, dimY - 8);
 
   // Corner registration crosshairs
@@ -436,7 +441,7 @@ function makeDashedRing(radius, dashSize, gapSize, color, opacity = 0.65) {
 // A. CENTERPIECE HERO — QUILL TECHNICAL ENTITY (compact app-icon scale)
 // ══════════════════════════════════════════════════════════════════════
 const quillGroup = new THREE.Group();
-quillGroup.position.set(-1.45, 0.08, 0.85);
+quillGroup.position.set(-0.68, 0.06, 0.85);
 worldGroup.add(quillGroup);
 
 // Crisp matte architectural ceramic-ivory squircle (macOS app-icon proportion)
@@ -731,27 +736,124 @@ function drawRMPage(idx, flash = 0) {
 drawRMPage(0, 0);
 
 // ══════════════════════════════════════════════════════════════════════
+// A0. SWARM OF AI AGENT NODES PINGING QUILL (left constellation)
+// ══════════════════════════════════════════════════════════════════════
+const swarmGroup = new THREE.Group();
+worldGroup.add(swarmGroup);
+
+const AGENT_SEEDS = [
+  { x: -3.55, y:  1.28, z:  0.15, phase: 0.0, speed: 0.9 },
+  { x: -3.10, y:  0.52, z:  0.65, phase: 1.1, speed: 1.1 },
+  { x: -3.72, y: -0.18, z: -0.25, phase: 2.3, speed: 0.85 },
+  { x: -2.95, y: -0.95, z:  0.45, phase: 3.4, speed: 1.05 },
+  { x: -2.35, y:  1.45, z: -0.35, phase: 4.2, speed: 0.95 },
+  { x: -2.42, y: -1.42, z: -0.10, phase: 5.1, speed: 1.0 },
+  { x: -3.45, y: -1.18, z: -0.45, phase: 1.8, speed: 0.8 },
+  { x: -2.25, y:  0.72, z:  0.30, phase: 2.9, speed: 1.15 }
+];
+
+const agentOctaGeo = new THREE.OctahedronGeometry(0.11, 0);
+const agentWireGeo = new THREE.EdgesGeometry(agentOctaGeo);
+const agentNodes = [];
+
+AGENT_SEEDS.forEach((s) => {
+  const g = new THREE.Group();
+  g.position.set(s.x, s.y, s.z);
+
+  const core = new THREE.Mesh(
+    agentOctaGeo,
+    new THREE.MeshStandardMaterial({ color: '#FAF8F2', roughness: 0.55, metalness: 0.08 })
+  );
+  g.add(core);
+
+  const wireMat = new THREE.LineBasicMaterial({ color: '#181715', transparent: true, opacity: 0.72 });
+  g.add(new THREE.LineSegments(agentWireGeo, wireMat));
+
+  // Delicate dotted halo around each agent
+  const halo = makeDashedRing(0.19, 0.02, 0.03, '#1D4E89', 0.36);
+  g.add(halo);
+
+  // Faint dotted schematic tether line to Quill
+  const tetherGeo = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(s.x, s.y, s.z),
+    new THREE.Vector3(-0.72, 0.06, 0.85)
+  ]);
+  const tetherMat = new THREE.LineDashedMaterial({
+    color: '#181715', dashSize: 0.04, gapSize: 0.07, transparent: true, opacity: 0.16
+  });
+  const tether = new THREE.Line(tetherGeo, tetherMat);
+  tether.computeLineDistances();
+  swarmGroup.add(tether);
+
+  swarmGroup.add(g);
+  agentNodes.push({ group: g, core, wireMat, halo, tether, tetherGeo, seed: s, pingGlow: 0 });
+});
+
+// Active ping pulses flying from agents → Quill
+const activePings = [];
+let pingCursor = 0;
+
+function launchAgentPing(nowSec) {
+  const agent = agentNodes[pingCursor % agentNodes.length];
+  pingCursor++;
+  agent.pingGlow = 1.0;
+
+  const start = agent.group.position.clone();
+  const end = quillGroup.position.clone();
+  const mid = start.clone().lerp(end, 0.5);
+  mid.y += (Math.random() - 0.5) * 0.45;
+  mid.z += 0.25;
+  const curve = new THREE.CatmullRomCurve3([start, mid, end]);
+
+  // Crisp cobalt signal dot + subtle trailing dashed arc
+  const dot = new THREE.Mesh(
+    new THREE.SphereGeometry(0.036, 12, 12),
+    new THREE.MeshBasicMaterial({ color: '#1D4E89' })
+  );
+  worldGroup.add(dot);
+
+  const arcPts = curve.getPoints(32);
+  const arcGeo = new THREE.BufferGeometry().setFromPoints(arcPts);
+  const arcMat = new THREE.LineDashedMaterial({
+    color: '#1D4E89', dashSize: 0.05, gapSize: 0.04, transparent: true, opacity: 0.65
+  });
+  const arcLine = new THREE.Line(arcGeo, arcMat);
+  arcLine.computeLineDistances();
+  worldGroup.add(arcLine);
+
+  // Expanding ping ring at the originating agent
+  const ring = makeDashedRing(0.18, 0.03, 0.03, '#1D4E89', 0.8);
+  ring.position.copy(start);
+  worldGroup.add(ring);
+
+  activePings.push({
+    curve, dot, arcLine, arcGeo, arcMat, ring,
+    start: nowSec, duration: 0.62, triggeredQuill: false
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════════
 // C. 3D DASHED/DOTTED FLIGHT RAILS & SCHEMATIC PACKETS
 //    Sweeping cleanly from foreground Quill into the Paper Pro
 // ══════════════════════════════════════════════════════════════════════
 const railCurves = [
   new THREE.CatmullRomCurve3([
-    new THREE.Vector3(-0.96, 0.22, 0.85),
-    new THREE.Vector3(0.05, 0.62, 0.45),
-    new THREE.Vector3(1.10, 0.34, 0.02),
-    new THREE.Vector3(1.88, 0.14, -0.28)
+    new THREE.Vector3(-0.22, 0.22, 0.85),
+    new THREE.Vector3(0.55, 0.60, 0.42),
+    new THREE.Vector3(1.38, 0.34, 0.00),
+    new THREE.Vector3(2.05, 0.14, -0.28)
   ]),
   new THREE.CatmullRomCurve3([
-    new THREE.Vector3(-0.96, 0.08, 0.85),
-    new THREE.Vector3(0.08, 0.12, 0.42),
-    new THREE.Vector3(1.12, 0.06, 0.00),
-    new THREE.Vector3(1.88, 0.02, -0.28)
+    new THREE.Vector3(-0.22, 0.06, 0.85),
+    new THREE.Vector3(0.58, 0.12, 0.40),
+    new THREE.Vector3(1.40, 0.06, -0.02),
+    new THREE.Vector3(2.05, 0.02, -0.28)
   ]),
   new THREE.CatmullRomCurve3([
-    new THREE.Vector3(-0.96, -0.06, 0.85),
-    new THREE.Vector3(0.04, -0.44, 0.38),
-    new THREE.Vector3(1.08, -0.26, -0.04),
-    new THREE.Vector3(1.88, -0.10, -0.28)
+    new THREE.Vector3(-0.22, -0.08, 0.85),
+    new THREE.Vector3(0.54, -0.42, 0.36),
+    new THREE.Vector3(1.36, -0.24, -0.04),
+    new THREE.Vector3(2.05, -0.10, -0.28)
   ])
 ];
 
@@ -919,18 +1021,19 @@ function handleResize() {
   camera.updateProjectionMatrix();
   renderer.setSize(w, h);
   const portrait = h > w;
-  camera.position.z = portrait ? 11.4 : 8.8;
-  quillGroup.position.x = portrait ? -0.95 : -1.45;
+  camera.position.z = portrait ? 11.8 : 9.1;
+  quillGroup.position.x = portrait ? -0.35 : -0.68;
   quillGroup.position.z = portrait ? 0.65 : 0.85;
-  rmGroup.position.x = portrait ? 1.35 : 2.05;
+  rmGroup.position.x = portrait ? 1.55 : 2.18;
   rmGroup.position.z = portrait ? -0.45 : -0.35;
+  swarmGroup.scale.setScalar(portrait ? 0.72 : 1.0);
 }
 handleResize();
 window.addEventListener('resize', handleResize);
 
 // ── Main 60fps Loop ─────────────────────────────────────────────────
 const clock = new THREE.Clock();
-let nextAuto = 0.9;
+let nextPing = 0.55;
 
 function animate() {
   requestAnimationFrame(animate);
@@ -986,10 +1089,60 @@ function animate() {
     }
   }
 
-  // 6. Auto-dispatch schematic packets
-  if (t >= nextAuto) {
-    dispatchPacket(t);
-    nextAuto = t + 2.2;
+  // 5b. Animate the AI Agent Swarm gently orbiting & pinging Quill
+  agentNodes.forEach((a) => {
+    const s = a.seed;
+    a.group.position.x = s.x + Math.sin(t * s.speed * 0.7 + s.phase) * 0.14;
+    a.group.position.y = s.y + Math.cos(t * s.speed * 0.85 + s.phase) * 0.16;
+    a.group.position.z = s.z + Math.sin(t * s.speed * 0.6 + s.phase * 1.3) * 0.12;
+    a.core.rotation.x = t * 0.7 + s.phase;
+    a.core.rotation.y = t * 0.9 + s.phase;
+    a.halo.rotation.z = -t * 0.6 + s.phase;
+
+    // Update tether endpoints to track drifting agent + Quill
+    const tp = a.tetherGeo.attributes.position;
+    tp.setXYZ(0, a.group.position.x, a.group.position.y, a.group.position.z);
+    tp.setXYZ(1, quillGroup.position.x, quillGroup.position.y, quillGroup.position.z);
+    tp.needsUpdate = true;
+
+    if (a.pingGlow > 0.01) {
+      a.pingGlow *= 0.92;
+      a.wireMat.color.set('#1D4E89');
+      a.group.scale.setScalar(1 + a.pingGlow * 0.25);
+    } else {
+      a.wireMat.color.set('#181715');
+      a.group.scale.setScalar(1);
+    }
+  });
+
+  // Periodic swarm pings → when ping arrives at Quill, Quill dispatches to reMarkable!
+  if (t >= nextPing) {
+    launchAgentPing(t);
+    nextPing = t + 1.35 + Math.random() * 0.75;
+  }
+
+  for (let i = activePings.length - 1; i >= 0; i--) {
+    const p = activePings[i];
+    const u = Math.min(1, (t - p.start) / p.duration);
+    const ease = u * u * (3 - 2 * u);
+    p.dot.position.copy(p.curve.getPoint(ease));
+    p.arcMat.opacity = Math.sin(u * Math.PI) * 0.65;
+    p.ring.scale.setScalar(1 + u * 2.2);
+    p.ring.material.opacity = Math.max(0, (1 - u) * 0.7);
+
+    if (u >= 0.92 && !p.triggeredQuill) {
+      p.triggeredQuill = true;
+      dispatchPacket(t);
+    }
+    if (u >= 1) {
+      worldGroup.remove(p.dot);
+      worldGroup.remove(p.arcLine);
+      worldGroup.remove(p.ring);
+      p.dot.geometry.dispose(); p.dot.material.dispose();
+      p.arcGeo.dispose(); p.arcMat.dispose();
+      p.ring.geometry.dispose(); p.ring.material.dispose();
+      activePings.splice(i, 1);
+    }
   }
 
   // 7. Update traveling curling schematic packets
