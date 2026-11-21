@@ -886,13 +886,13 @@ AGENT_SEEDS.forEach((s) => {
   const g = new THREE.Group();
   g.position.set(s.x, s.y, s.z);
 
-  // Refined medium-graphite faceted core + rotating ivory wireframe edges
+  // High-contrast dark faceted charcoal core + rotating ivory wireframe edges
   const core = new THREE.Mesh(
     agentOctaGeo,
     new THREE.MeshStandardMaterial({
-      color: '#5D626E',
-      roughness: 0.42,
-      metalness: 0.14,
+      color: '#222429',
+      roughness: 0.34,
+      metalness: 0.25,
       flatShading: true
     })
   );
@@ -1386,7 +1386,7 @@ function animate() {
       a.wireMat.color.set('#FFFFFF');
       a.group.scale.setScalar(1 + a.pingGlow * 0.25 + hoverBoost);
     } else {
-      a.core.material.color.set(hoverBoost > 0 ? '#3E4656' : '#5D626E');
+      a.core.material.color.set(hoverBoost > 0 ? '#1D4E89' : '#222429');
       a.wireMat.color.set('#FAF8F2');
       a.group.scale.setScalar(1 + hoverBoost);
     }
