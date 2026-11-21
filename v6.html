@@ -379,6 +379,46 @@ function drawSchematicBackground(t, pulse) {
     bctx.fill();
   });
 
+  // Subtle tilted orbital ellipses with tiny dots gliding around the scene
+  const ORBITS = [
+    { cx: qx, cy: qy, rx: 190, ry: 74,  tilt: -0.32, speed:  0.42, dots: 2, col: 'rgba(29, 78, 137, 0.16)', dotCol: 'rgba(29, 78, 137, 0.55)', dash: [3, 6] },
+    { cx: qx, cy: qy, rx: 245, ry: 96,  tilt:  0.48, speed: -0.31, dots: 2, col: 'rgba(24, 23, 21, 0.10)', dotCol: 'rgba(24, 23, 21, 0.45)', dash: [2, 7] },
+    { cx: qx, cy: qy, rx: 320, ry: 122, tilt: -0.14, speed:  0.22, dots: 1, col: 'rgba(29, 78, 137, 0.11)', dotCol: 'rgba(29, 78, 137, 0.48)', dash: [4, 8] },
+    { cx: (qx + rx) * 0.5, cy: qy, rx: (rx - qx) * 0.62, ry: 118, tilt: -0.10, speed: 0.27, dots: 2, col: 'rgba(24, 23, 21, 0.085)', dotCol: 'rgba(29, 78, 137, 0.45)', dash: [2, 6] },
+    { cx: (sx + qx) * 0.52, cy: qy, rx: (qx - sx) * 0.78, ry: 132, tilt: 0.24, speed: -0.24, dots: 1, col: 'rgba(24, 23, 21, 0.08)', dotCol: 'rgba(24, 23, 21, 0.40)', dash: [3, 7] }
+  ];
+  ORBITS.forEach((o, oi) => {
+    bctx.save();
+    bctx.translate(o.cx, o.cy);
+    bctx.rotate(o.tilt + Math.sin(t * 0.18 + oi) * 0.03);
+    bctx.strokeStyle = o.col;
+    bctx.lineWidth = 0.8;
+    bctx.setLineDash(o.dash);
+    bctx.beginPath();
+    bctx.ellipse(0, 0, o.rx, o.ry, 0, 0, Math.PI * 2);
+    bctx.stroke();
+
+    bctx.setLineDash([]);
+    for (let d = 0; d < o.dots; d++) {
+      const a = t * o.speed + oi * 1.4 + d * Math.PI;
+      const dx = Math.cos(a) * o.rx;
+      const dy = Math.sin(a) * o.ry;
+      bctx.fillStyle = o.dotCol;
+      bctx.beginPath();
+      bctx.arc(dx, dy, 2.2, 0, Math.PI * 2);
+      bctx.fill();
+      // Faint hairline halo around the primary dot
+      if (d === 0) {
+        bctx.strokeStyle = o.col;
+        bctx.lineWidth = 0.7;
+        bctx.beginPath();
+        bctx.arc(dx, dy, 5.5, 0, Math.PI * 2);
+        bctx.stroke();
+      }
+    }
+    bctx.restore();
+  });
+
   // Living signal ticks gliding across the horizontal datum line
   for (let k = 0; k < 3; k++) {
     const u = ((t * 0.16 + k * 0.333) % 1);
