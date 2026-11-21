@@ -216,13 +216,13 @@
     </svg>
     <span>Quill</span>
   </a>
-  <span class="spec-code">MACOS · SYNC V3 · FIG. 01</span>
+  <span class="spec-code">MACOS</span>
 </header>
 
 <footer>
   <h1>A macOS menu-bar utility that sends <strong>Markdown, web articles, PDFs, and EPUBs</strong> directly to your reMarkable.</h1>
   <div class="controls">
-    <button class="key-btn" id="send-btn" type="button">⌥⌘R · dispatch</button>
+    <button class="key-btn" id="send-btn" type="button">⌥⌘R</button>
     <span>·</span>
     <a href="https://github.com/pasevin">GitHub</a>
   </div>
@@ -337,13 +337,13 @@ function drawSchematicBackground(t, pulse) {
   bctx.moveTo(rx - 8, dimY - 3.5); bctx.lineTo(rx, dimY); bctx.lineTo(rx - 8, dimY + 3.5);
   bctx.stroke();
 
-  // Small technical labels on the drafting sheet
+  // Small clean labels on the drafting sheet
   bctx.fillStyle = 'rgba(24, 23, 21, 0.42)';
   bctx.font = '400 10px "JetBrains Mono", monospace';
-  bctx.fillText('A · QUILL ENTITY', qx - 48, dimY + 18);
-  bctx.fillText('B · PAPER PRO', rx - 40, dimY + 18);
+  bctx.fillText('QUILL', qx - 16, dimY + 18);
+  bctx.fillText('REMARKABLE', rx - 32, dimY + 18);
   bctx.fillStyle = 'rgba(29, 78, 137, 0.68)';
-  bctx.fillText('SYNC V3  →', (qx + rx) * 0.5 - 30, dimY - 8);
+  bctx.fillText('→', (qx + rx) * 0.5 - 4, dimY - 8);
 
   // Corner registration crosshairs
   const marks = [[42, 76], [bgW - 42, 76], [42, bgH - 76], [bgW - 42, bgH - 76]];
@@ -655,10 +655,10 @@ rmGroup.add(penGroup);
 
 // ── E-Ink Screen Renderer ───────────────────────────────────────────
 const DOCS = [
-  { ext: '.MD',   title: 'Architecture',    tag: 'V6 NOTEBOOK', color: '#1D4E89' },
-  { ext: 'HTML',  title: 'On Quiet Tools',  tag: 'ARTICLE',     color: '#A8422B' },
-  { ext: '.PDF',  title: 'Spatial Paper',   tag: 'RAW CPAGES',  color: '#2B624B' },
-  { ext: '.EPUB', title: 'Field Notes',     tag: 'RAW EPUB',    color: '#4F4C45' }
+  { ext: '.MD',   title: 'Architecture',    tag: 'NOTEBOOK', color: '#1D4E89' },
+  { ext: 'HTML',  title: 'On Quiet Tools',  tag: 'ARTICLE',  color: '#A8422B' },
+  { ext: '.PDF',  title: 'Spatial Paper',   tag: 'DOCUMENT', color: '#2B624B' },
+  { ext: '.EPUB', title: 'Field Notes',     tag: 'BOOK',     color: '#4F4C45' }
 ];
 
 function drawRMPage(idx, flash = 0) {
