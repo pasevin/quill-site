@@ -433,22 +433,22 @@ function makeDashedRing(radius, dashSize, gapSize, color, opacity = 0.65) {
 }
 
 // ══════════════════════════════════════════════════════════════════════
-// A. CENTERPIECE HERO — QUILL TECHNICAL ENTITY (foreground left-center)
+// A. CENTERPIECE HERO — QUILL TECHNICAL ENTITY (compact app-icon scale)
 // ══════════════════════════════════════════════════════════════════════
 const quillGroup = new THREE.Group();
 quillGroup.position.set(-1.15, 0.08, 0.65);
 worldGroup.add(quillGroup);
 
-// Crisp matte architectural ceramic-ivory squircle slab
-const qSlabGeo = new THREE.ExtrudeGeometry(roundedRectShape(1.42, 1.42, 0.30), {
-  depth: 0.14,
+// Crisp matte architectural ceramic-ivory squircle (macOS app-icon proportion)
+const qSlabGeo = new THREE.ExtrudeGeometry(roundedRectShape(0.84, 0.84, 0.19), {
+  depth: 0.10,
   bevelEnabled: true,
-  bevelThickness: 0.02,
-  bevelSize: 0.02,
+  bevelThickness: 0.014,
+  bevelSize: 0.014,
   bevelSegments: 4,
   curveSegments: 24
 });
-qSlabGeo.translate(0, 0, -0.07);
+qSlabGeo.translate(0, 0, -0.05);
 const qSlabMat = new THREE.MeshStandardMaterial({
   color: '#FAF8F2',
   roughness: 0.56,
@@ -457,19 +457,19 @@ const qSlabMat = new THREE.MeshStandardMaterial({
 const qSlab = new THREE.Mesh(qSlabGeo, qSlabMat);
 quillGroup.add(qSlab);
 
-// Precision CAD wireframe edge outline around the Quill slab
+// Precision CAD wireframe edge outline around the Quill app icon
 const qEdgesMat = new THREE.LineBasicMaterial({ color: '#181715', transparent: true, opacity: 0.52 });
 const qEdges = new THREE.LineSegments(new THREE.EdgesGeometry(qSlabGeo, 26), qEdgesMat);
 quillGroup.add(qEdges);
 
-// Outer wireframe drafting bounding box (slightly expanded, dashed)
-const cageGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(1.76, 1.76, 0.40));
-const cageMat = new THREE.LineDashedMaterial({ color: '#1D4E89', dashSize: 0.06, gapSize: 0.05, transparent: true, opacity: 0.45 });
+// Outer wireframe drafting bounding box (tightened around app-icon scale)
+const cageGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(1.08, 1.08, 0.28));
+const cageMat = new THREE.LineDashedMaterial({ color: '#1D4E89', dashSize: 0.045, gapSize: 0.04, transparent: true, opacity: 0.45 });
 const cage = new THREE.LineSegments(cageGeo, cageMat);
 cage.computeLineDistances();
 quillGroup.add(cage);
 
-// Ultra-thin architectural hairline feather quill (technical drafting weight)
+// Original Quill app feather icon (assets/quill-icon.png) at natural crisp scale
 const quillIconCanvas = document.createElement('canvas');
 quillIconCanvas.width = 512; quillIconCanvas.height = 512;
 const qctx = quillIconCanvas.getContext('2d');
@@ -477,40 +477,35 @@ const quillIconTex = new THREE.CanvasTexture(quillIconCanvas);
 quillIconTex.colorSpace = THREE.SRGBColorSpace;
 quillIconTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
 
-const thinQuillSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
-  <path d="M12 52 L50 14" stroke="#181715" stroke-width="1.35" stroke-linecap="round"/>
-  <path d="M19 45 C16.5 34, 21.5 22, 33 14.5 C40 10, 47.5 9.5, 53 11 C50 18.5, 45.5 25, 39.5 30 L34 29 L38.5 33.5 C32.5 39.5, 25.5 43.5, 19 45 Z" stroke="#181715" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M26 38 L22 31 M33 31 L29 23.5 M40 24 L37 17.5" stroke="#181715" stroke-width="0.9" stroke-linecap="round" opacity="0.55"/>
-</svg>`;
 const quillImg = new Image();
 quillImg.onload = () => {
   qctx.clearRect(0, 0, 512, 512);
-  qctx.drawImage(quillImg, 44, 44, 424, 424);
+  qctx.drawImage(quillImg, 72, 72, 368, 368);
   quillIconTex.needsUpdate = true;
 };
-quillImg.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(thinQuillSvg);
+quillImg.src = 'assets/quill-icon.png';
 
 const quillEmblem = new THREE.Mesh(
-  new THREE.PlaneGeometry(1.12, 1.12),
+  new THREE.PlaneGeometry(0.62, 0.62),
   new THREE.MeshBasicMaterial({ map: quillIconTex, transparent: true, depthWrite: false })
 );
-quillEmblem.position.z = 0.095;
+quillEmblem.position.z = 0.068;
 quillGroup.add(quillEmblem);
 
-// Rotating schematic dashed & dotted rings around Quill
-const ringA = makeDashedRing(1.06, 0.07, 0.06, '#181715', 0.40);
+// Rotating schematic dashed & dotted rings scaled cleanly around the app icon
+const ringA = makeDashedRing(0.68, 0.05, 0.045, '#181715', 0.40);
 ringA.rotation.set(0.28, 0.22, 0);
 quillGroup.add(ringA);
 
-const ringB = makeDashedRing(1.24, 0.02, 0.05, '#1D4E89', 0.62);
+const ringB = makeDashedRing(0.82, 0.018, 0.04, '#1D4E89', 0.62);
 ringB.rotation.set(-0.35, -0.18, 0);
 quillGroup.add(ringB);
 
 // Expanding schematic pulse circle on dispatch
 const pulseCircles = [];
 function spawnSchematicPulse() {
-  const r = makeDashedRing(0.82, 0.06, 0.05, '#1D4E89', 0.78);
-  r.position.z = 0.08;
+  const r = makeDashedRing(0.54, 0.045, 0.04, '#1D4E89', 0.78);
+  r.position.z = 0.06;
   quillGroup.add(r);
   pulseCircles.push({ line: r, age: 0 });
 }
@@ -748,21 +743,21 @@ drawRMPage(0, 0);
 // ══════════════════════════════════════════════════════════════════════
 const railCurves = [
   new THREE.CatmullRomCurve3([
-    new THREE.Vector3(-0.38, 0.26, 0.68),
-    new THREE.Vector3(0.85, 0.82, -0.65),
-    new THREE.Vector3(2.22, 0.48, -2.25),
+    new THREE.Vector3(-0.68, 0.20, 0.66),
+    new THREE.Vector3(0.75, 0.76, -0.68),
+    new THREE.Vector3(2.20, 0.46, -2.25),
     new THREE.Vector3(3.22, 0.16, -3.55)
   ]),
   new THREE.CatmullRomCurve3([
-    new THREE.Vector3(-0.38, 0.08, 0.68),
-    new THREE.Vector3(0.90, 0.18, -0.75),
-    new THREE.Vector3(2.26, 0.10, -2.30),
+    new THREE.Vector3(-0.68, 0.08, 0.66),
+    new THREE.Vector3(0.80, 0.16, -0.78),
+    new THREE.Vector3(2.24, 0.10, -2.30),
     new THREE.Vector3(3.22, 0.06, -3.55)
   ]),
   new THREE.CatmullRomCurve3([
-    new THREE.Vector3(-0.38, -0.14, 0.68),
-    new THREE.Vector3(0.82, -0.58, -0.82),
-    new THREE.Vector3(2.18, -0.34, -2.38),
+    new THREE.Vector3(-0.68, -0.06, 0.66),
+    new THREE.Vector3(0.74, -0.52, -0.84),
+    new THREE.Vector3(2.16, -0.32, -2.38),
     new THREE.Vector3(3.22, -0.08, -3.55)
   ])
 ];
