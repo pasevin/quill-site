@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quill</title>
+<meta name="description" content="From your Mac to your reMarkable, in a keystroke.">
+<link rel="icon" type="image/png" href="assets/quill-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400&family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;1,6..72,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --desk-hi: #F4F1EA;
+    --desk-mid: #EAE5DB;
+    --desk-lo: #DDD6C8;
+    --ink: #171614;
+    --ink-soft: #59554D;
+    --ink-faint: #8D877B;
+    --cobalt: #1E4D8C;
+    --terracotta: #B64933;
+    --serif: "Instrument Serif", "Newsreader", Georgia, serif;
+    --body: "Newsreader", Georgia, serif;
+    --mono: "JetBrains Mono", ui-monospace, monospace;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: var(--desk-mid);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    user-select: none;
+  }
+
+  /* ── Sunlit Gallery Surface ─────────────────────────────────────── */
+  .gallery {
+    position: relative;
+    width: 100vw;
+    height: 100dvh;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    background:
+      radial-gradient(ellipse 75% 65% at 62% 32%, rgba(255,253,248,0.92) 0%, rgba(244,241,234,0.35) 55%, rgba(221,214,200,0) 100%),
+      linear-gradient(135deg, #F3F0E8 0%, #E7E1D5 58%, #DDD5C6 100%);
+    overflow: hidden;
+  }
+
+  /* Soft diagonal window sunlight shaft */
+  .sunlight {
+    position: absolute;
+    inset: -20%;
+    pointer-events: none;
+    z-index: 1;
+    background:
+      linear-gradient(
+        118deg,
+        transparent 18%,
+        rgba(255, 252, 244, 0.42) 34%,
+        rgba(255, 252, 244, 0.14) 44%,
+        transparent 56%,
+        rgba(255, 252, 244, 0.22) 66%,
+        transparent 78%
+      );
+    filter: blur(22px);
+    animation: driftLight 18s ease-in-out infinite alternate;
+  }
+  @keyframes driftLight {
+    from { transform: translate(-2%, -1%) scale(1); opacity: 0.85; }
+    to   { transform: translate(2.5%, 1.5%) scale(1.03); opacity: 1; }
+  }
+
+  /* Fine paper grain */
+  .grain {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 20;
+    opacity: 0.032;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 220 220' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.88' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* Kinetic ink-particle canvas (overlays the 3D scene seamlessly) */
+  canvas#ink-fx {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 9;
+  }
+
+  /* ── Minimal Perimeter Chrome ───────────────────────────────────── */
+  header {
+    position: relative;
+    z-index: 15;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 28px 40px 0;
+  }
+  .wordmark {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .wordmark svg { width: 17px; height: 17px; opacity: 0.9; }
+  .wordmark span {
+    font-family: var(--serif);
+    font-size: 23px;
+    letter-spacing: 0.01em;
+  }
+  .meta-tag {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  /* ── Central 3D Sculptural Stage ────────────────────────────────── */
+  .stage {
+    position: relative;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    perspective: 1800px;
+    cursor: pointer;
+  }
+
+  .scene {
+    position: relative;
+    transform-style: preserve-3d;
+    transform: rotateX(18deg) rotateY(-18deg) rotateZ(4deg);
+    transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: transform;
+  }
+
+  /* Architectural shadow cast onto the desk plane */
+  .desk-shadow {
+    position: absolute;
+    inset: 14px -10px -26px 26px;
+    border-radius: 20px;
+    background: radial-gradient(ellipse at 50% 50%, rgba(23, 22, 20, 0.22) 0%, rgba(23, 22, 20, 0.09) 52%, transparent 78%);
+    filter: blur(22px);
+    transform: translateZ(-28px);
+    pointer-events: none;
+  }
+
+  /* Hardware-accurate reMarkable Paper Pro (196.6 × 274.1 mm) */
+  .paper-pro {
+    position: relative;
+    width: min(340px, 68vw);
+    aspect-ratio: 196.6 / 274.1;
+    border-radius: 13px;
+    background: linear-gradient(150deg, #F1EEE7 0%, #E7E3DA 55%, #DDD8CD 100%);
+    padding: 4.4% 4.4% 10.6% 4.4%; /* authentic slim top/sides + wider bottom chin */
+    transform-style: preserve-3d;
+    box-shadow:
+      /* Anodized silver aluminum outer rim */
+      inset 0 0 0 1.2px rgba(255, 255, 255, 0.9),
+      inset 0 0 0 2.5px #CFCAC0,
+      /* True 3D extruded corrugated aluminum edge (signature Paper Pro dual grooves) */
+      1.5px 1.5px 0 #D3CFC6,
+      3px 3px 0 #B5B0A6,
+      4.5px 4.5px 0 #D6D2C9,
+      6px 6px 0 #A8A399,
+      7.5px 7.5px 0 #CFCBC2,
+      9px 9px 0 #9D988E,
+      /* Close ambient occlusion */
+      16px 24px 36px -10px rgba(23, 22, 20, 0.24);
+  }
+
+  /* Sleep/wake button on top-left edge */
+  .power-btn {
+    position: absolute;
+    top: -2.5px;
+    left: 26px;
+    width: 24px;
+    height: 3px;
+    border-radius: 2px 2px 0 0;
+    background: linear-gradient(90deg, #B5B1A8, #E2DED5, #9E9A90);
+  }
+
+  /* 11.8" Canvas Color E-Ink Display */
+  .eink {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    border-radius: 3px;
+    background:
+      linear-gradient(155deg, rgba(255,255,255,0.42) 0%, rgba(255,255,255,0) 45%),
+      #F6F4EE;
+    box-shadow:
+      inset 0 0 0 1px rgba(23,22,20,0.13),
+      inset 0 2px 6px rgba(23,22,20,0.04);
+    overflow: hidden;
+  }
+
+  /* Authentic e-ink full-screen refresh flicker */
+  .eink-flash {
+    position: absolute;
+    inset: 0;
+    background: #171614;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 6;
+  }
+  .eink-flash.refreshing {
+    animation: einkRefresh 420ms steps(2, end);
+  }
+  @keyframes einkRefresh {
+    0%   { opacity: 0; }
+    28%  { opacity: 0.78; }
+    62%  { opacity: 0.14; }
+    100% { opacity: 0; }
+  }
+
+  /* Art canvas inside the Paper Pro screen (SVG editorial page) */
+  .page-art {
+    position: absolute;
+    inset: 0;
+    padding: 10% 10%;
+    display: flex;
+    flex-direction: column;
+    transition: opacity 220ms ease;
+  }
+  .page-art svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  /* Animated ink stroke inside the tablet */
+  .draw-stroke {
+    stroke-dasharray: 260;
+    stroke-dashoffset: 260;
+    animation: drawInk 1.4s cubic-bezier(0.25, 1, 0.5, 1) 0.35s forwards;
+  }
+  @keyframes drawInk {
+    to { stroke-dashoffset: 0; }
+  }
+
+  /* Magnetic Marker Plus docked flush on right edge */
+  .marker {
+    position: absolute;
+    top: 15%;
+    right: -18px;
+    width: 13px;
+    height: 66%;
+    transform: translateZ(3px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    filter: drop-shadow(-2px 2px 2px rgba(23,22,20,0.28)) drop-shadow(10px 14px 14px rgba(23,22,20,0.20));
+  }
+  .m-eraser {
+    width: 12px;
+    height: 19px;
+    border-radius: 5px 5px 1px 1px;
+    background: linear-gradient(90deg, #3D3C39 0%, #595752 38%, #242321 100%);
+  }
+  .m-ring {
+    width: 13px;
+    height: 2.5px;
+    background: linear-gradient(90deg, #8F8B82, #DAD6CE, #6D6A62);
+  }
+  .m-shaft {
+    width: 13px;
+    flex: 1;
+    background: linear-gradient(90deg, #2D2C2A 0%, #484642 30%, #1C1B19 76%, #141312 100%);
+  }
+  .m-cone {
+    width: 0;
+    height: 0;
+    border-left: 6.5px solid transparent;
+    border-right: 6.5px solid transparent;
+    border-top: 22px solid #232220;
+  }
+  .m-nib {
+    width: 2.5px;
+    height: 5px;
+    background: #55534E;
+    border-radius: 0 0 2px 2px;
+    margin-top: -2px;
+  }
+
+  /* Floating translucent paper sheet animating from upper-left into the tablet */
+  .flying-sheet {
+    position: absolute;
+    width: 124px;
+    height: 162px;
+    border-radius: 5px;
+    background: rgba(255, 254, 250, 0.92);
+    border: 1px solid rgba(23, 22, 20, 0.14);
+    box-shadow: 0 20px 36px -12px rgba(23, 22, 20, 0.18);
+    padding: 16px 14px;
+    pointer-events: none;
+    z-index: 8;
+    opacity: 0;
+    transform-style: preserve-3d;
+  }
+  .flying-sheet.soar {
+    animation: sheetFlight 1.25s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+  @keyframes sheetFlight {
+    0% {
+      opacity: 0;
+      transform: translate3d(-250px, -130px, 160px) rotateX(28deg) rotateY(22deg) rotateZ(-14deg) scale(0.72);
+    }
+    22% {
+      opacity: 0.96;
+    }
+    76% {
+      opacity: 0.92;
+      transform: translate3d(-8px, -10px, 28px) rotateX(4deg) rotateY(-3deg) rotateZ(1deg) scale(1.04);
+    }
+    100% {
+      opacity: 0;
+      transform: translate3d(0px, -12px, 4px) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(1.0);
+    }
+  }
+  .sheet-line {
+    height: 3px;
+    border-radius: 2px;
+    background: rgba(23, 22, 20, 0.18);
+    margin-bottom: 8px;
+  }
+  .sheet-line.title { width: 68%; height: 5px; background: rgba(23, 22, 20, 0.72); margin-bottom: 14px; }
+  .sheet-line.accent { width: 46%; background: rgba(30, 77, 140, 0.55); }
+  .sheet-line.short { width: 58%; }
+
+  /* ── Single-Sentence Editorial Caption ──────────────────────────── */
+  footer {
+    position: relative;
+    z-index: 15;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 0 28px 36px;
+    gap: 14px;
+  }
+  h1 {
+    font-family: var(--serif);
+    font-size: clamp(28px, 3.6vw, 44px);
+    font-weight: 400;
+    line-height: 1.12;
+    letter-spacing: -0.015em;
+    color: var(--ink);
+    text-wrap: balance;
+  }
+  h1 em {
+    font-style: italic;
+    color: var(--cobalt);
+  }
+  .quiet-bar {
+    display: inline-flex;
+    align-items: center;
+    gap: 16px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-faint);
+  }
+  .trigger-key {
+    appearance: none;
+    background: rgba(255, 255, 255, 0.62);
+    border: 1px solid rgba(23, 22, 20, 0.14);
+    border-bottom-width: 2px;
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-soft);
+    cursor: pointer;
+    transition: transform 0.12s ease, background 0.15s ease, color 0.15s ease;
+  }
+  .trigger-key:hover {
+    background: #FFFFFF;
+    color: var(--ink);
+  }
+  .trigger-key:active {
+    transform: translateY(1px);
+  }
+  .quiet-bar a {
+    color: var(--ink-faint);
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+  .quiet-bar a:hover { color: var(--ink); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sunlight, .flying-sheet.soar, .eink-flash.refreshing, .draw-stroke { animation: none !important; }
+    .scene { transition: none; }
+  }
+  @media (max-width: 640px) {
+    header { padding: 20px 22px 0; }
+    footer { padding: 0 22px 26px; }
+    .paper-pro { width: min(270px, 72vw); }
+    .marker { right: -15px; width: 11px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="gallery">
+  <div class="sunlight" aria-hidden="true"></div>
+  <canvas id="ink-fx" aria-hidden="true"></canvas>
+  <div class="grain" aria-hidden="true"></div>
+
+  <header>
+    <a class="wordmark" href="#">
+      <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+        <path d="M15.807.531c-.174-.177-.41-.289-.64-.363a3.765 3.765 0 0 0-.833-.15c-.62-.049-1.394 0-2.252.175C10.365.545 8.264 1.415 6.315 3.1c-1.95 1.686-3.168 3.724-3.758 5.423-.294.847-.44 1.634-.429 2.268.005.316.05.62.154.88q.025.061.056.122A68 68 0 0 0 .08 15.198a.528.528 0 0 0 .157.72.504.504 0 0 0 .705-.16 67.6 67.6 0 0 1 2.158-3.26c.285.141.616.195.958.182.513-.02 1.098-.188 1.723-.49 1.25-.605 2.744-1.787 4.303-3.642l1.518-1.55a.53.53 0 0 0 0-.739l-.729-.744 1.311.209a.5.5 0 0 0 .443-.15l.663-.684c.663-.68 1.292-1.325 1.763-1.892.314-.378.585-.752.754-1.107.163-.345.278-.773.112-1.188a.5.5 0 0 0-.112-.172"/>
+      </svg>
+      <span>Quill</span>
+    </a>
+    <span class="meta-tag">macOS</span>
+  </header>
+
+  <main class="stage" id="stage" title="Click or press Space to send a page">
+    <div class="scene" id="scene">
+      <div class="desk-shadow" aria-hidden="true"></div>
+
+      <!-- Flying translucent sheet arriving from the Mac -->
+      <div class="flying-sheet" id="flying-sheet" aria-hidden="true">
+        <div class="sheet-line title"></div>
+        <div class="sheet-line"></div>
+        <div class="sheet-line short"></div>
+        <div class="sheet-line accent"></div>
+        <div class="sheet-line"></div>
+        <div class="sheet-line short"></div>
+      </div>
+
+      <!-- Sculptural 3D reMarkable Paper Pro -->
+      <div class="paper-pro" role="img" aria-label="3D reMarkable Paper Pro receiving pages from macOS">
+        <div class="power-btn"></div>
+
+        <div class="eink">
+          <div class="eink-flash" id="eink-flash"></div>
+          <div class="page-art" id="page-art"></div>
+        </div>
+
+        <div class="marker" aria-hidden="true">
+          <div class="m-eraser"></div>
+          <div class="m-ring"></div>
+          <div class="m-shaft"></div>
+          <div class="m-cone"></div>
+          <div class="m-nib"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <h1>From your Mac to your reMarkable, <em>in a keystroke.</em></h1>
+    <div class="quiet-bar">
+      <button class="trigger-key" id="send-btn" type="button">⌥⌘R</button>
+      <span>·</span>
+      <a href="https://github.com/pasevin">GitHub</a>
+    </div>
+  </footer>
+</div>
+
+<script>
+  // Three pure visual page studies — typography, diagram, and manuscript
+  const PAGES = [
+    // 1. Minimalist editorial note with cobalt pen underline
+    `<svg viewBox="0 0 260 350" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <text x="4" y="20" font-family="JetBrains Mono, monospace" font-size="8.5" fill="#8D877B">NOTES</text>
+      <line x1="4" y1="30" x2="256" y2="30" stroke="#E4DFD4"/>
+      <text x="4" y="64" font-family="Instrument Serif, Georgia, serif" font-size="28" fill="#171614">Architecture</text>
+      <path class="draw-stroke" d="M4 72 Q76 69 148 73" stroke="#1E4D8C" stroke-width="2.2" stroke-linecap="round"/>
+      <line x1="4" y1="100" x2="236" y2="100" stroke="#363430" stroke-width="1.6" stroke-linecap="round"/>
+      <line x1="4" y1="118" x2="220" y2="118" stroke="#363430" stroke-width="1.6" stroke-linecap="round"/>
+      <line x1="4" y1="136" x2="188" y2="136" stroke="#363430" stroke-width="1.6" stroke-linecap="round"/>
+
+      <rect x="4" y="164" width="252" height="86" rx="2" fill="#EFECE4" stroke="#D8D2C5"/>
+      <line x1="4" y1="190" x2="256" y2="190" stroke="#D8D2C5"/>
+      <line x1="4" y1="220" x2="256" y2="220" stroke="#E4DFD4"/>
+      <line x1="126" y1="164" x2="126" y2="250" stroke="#E4DFD4"/>
+      <line x1="18" y1="177" x2="84" y2="177" stroke="#171614" stroke-width="1.8" stroke-linecap="round"/>
+      <line x1="140" y1="177" x2="212" y2="177" stroke="#171614" stroke-width="1.8" stroke-linecap="round"/>
+      <line x1="18" y1="205" x2="96" y2="205" stroke="#7A756B" stroke-width="1.4" stroke-linecap="round"/>
+      <line x1="140" y1="205" x2="224" y2="205" stroke="#7A756B" stroke-width="1.4" stroke-linecap="round"/>
+      <line x1="18" y1="235" x2="78" y2="235" stroke="#7A756B" stroke-width="1.4" stroke-linecap="round"/>
+      <line x1="140" y1="235" x2="198" y2="235" stroke="#7A756B" stroke-width="1.4" stroke-linecap="round"/>
+
+      <!-- Handwritten stylus squiggle in cobalt -->
+      <path class="draw-stroke" d="M10 294 C26 282, 36 306, 52 290 C68 276, 82 302, 102 288 C118 278, 134 296, 156 286" stroke="#1E4D8C" stroke-width="1.8" stroke-linecap="round"/>
+      <text x="234" y="340" font-family="JetBrains Mono, monospace" font-size="8.5" fill="#8D877B">01</text>
+    </svg>`,
+
+    // 2. Calm long-form essay with warm terracotta margin highlight
+    `<svg viewBox="0 0 260 350" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <text x="4" y="20" font-family="JetBrains Mono, monospace" font-size="8.5" fill="#8D877B">READING</text>
+      <line x1="4" y1="30" x2="256" y2="30" stroke="#E4DFD4"/>
+      <text x="4" y="64" font-family="Instrument Serif, Georgia, serif" font-size="28" fill="#171614">On Quiet Tools</text>
+      <rect x="4" y="96" width="184" height="10" rx="2" fill="rgba(182,73,51,0.16)"/>
+      <line x1="4" y1="101" x2="244" y2="101" stroke="#363430" stroke-width="1.6" stroke-linecap="round"/>
+      <line x1="4" y1="120" x2="234" y2="120" stroke="#363430" stroke-width="1.6" stroke-linecap="round"/>
+      <line x1="4" y1="139" x2="248" y2="139" stroke="#363430" stroke-width="1.6" stroke-linecap="round"/>
+      <line x1="4" y1="158" x2="196" y2="158" stroke="#363430" stroke-width="1.6" stroke-linecap="round"/>
+
+      <line x1="4" y1="194" x2="242" y2="194" stroke="#6E6A62" stroke-width="1.5" stroke-linecap="round"/>
+      <line x1="4" y1="213" x2="228" y2="213" stroke="#6E6A62" stroke-width="1.5" stroke-linecap="round"/>
+      <line x1="4" y1="232" x2="246" y2="232" stroke="#6E6A62" stroke-width="1.5" stroke-linecap="round"/>
+      <line x1="4" y1="251" x2="174" y2="251" stroke="#6E6A62" stroke-width="1.5" stroke-linecap="round"/>
+
+      <!-- Margin bracket in terracotta -->
+      <path class="draw-stroke" d="M252 94 L256 94 L256 160 L252 160" stroke="#B64933" stroke-width="2" stroke-linecap="round"/>
+      <text x="234" y="340" font-family="JetBrains Mono, monospace" font-size="8.5" fill="#8D877B">02</text>
+    </svg>`,
+
+    // 3. Research paper / geometric figure
+    `<svg viewBox="0 0 260 350" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <text x="4" y="20" font-family="JetBrains Mono, monospace" font-size="8.5" fill="#8D877B">PAPER</text>
+      <line x1="4" y1="30" x2="256" y2="30" stroke="#E4DFD4"/>
+      <text x="4" y="62" font-family="Instrument Serif, Georgia, serif" font-size="25" fill="#171614">Fig. 3 — Spatial</text>
+
+      <!-- Architectural geometric figure -->
+      <rect x="4" y="82" width="252" height="132" rx="3" fill="#EFECE4" stroke="#D8D2C5"/>
+      <circle cx="96" cy="148" r="38" stroke="#171614" stroke-width="1.4"/>
+      <circle cx="164" cy="148" r="38" stroke="#1E4D8C" stroke-width="1.4" stroke-dasharray="4 3"/>
+      <path class="draw-stroke" d="M58 148 L202 148" stroke="#B64933" stroke-width="1.6"/>
+      <circle cx="130" cy="148" r="4" fill="#1E4D8C"/>
+
+      <!-- Two-column academic text -->
+      <line x1="4" y1="238" x2="118" y2="238" stroke="#363430" stroke-width="1.4" stroke-linecap="round"/>
+      <line x1="4" y1="254" x2="112" y2="254" stroke="#363430" stroke-width="1.4" stroke-linecap="round"/>
+      <line x1="4" y1="270" x2="116" y2="270" stroke="#363430" stroke-width="1.4" stroke-linecap="round"/>
+      <line x1="4" y1="286" x2="94"  y2="286" stroke="#363430" stroke-width="1.4" stroke-linecap="round"/>
+
+      <line x1="138" y1="238" x2="252" y2="238" stroke="#363430" stroke-width="1.4" stroke-linecap="round"/>
+      <line x1="138" y1="254" x2="246" y2="254" stroke="#363430" stroke-width="1.4" stroke-linecap="round"/>
+      <line x1="138" y1="270" x2="250" y2="270" stroke="#363430" stroke-width="1.4" stroke-linecap="round"/>
+      <line x1="138" y1="286" x2="218" y2="286" stroke="#363430" stroke-width="1.4" stroke-linecap="round"/>
+      <text x="234" y="340" font-family="JetBrains Mono, monospace" font-size="8.5" fill="#8D877B">03</text>
+    </svg>`
+  ];
+
+  const pageEl = document.getElementById("page-art");
+  const flashEl = document.getElementById("eink-flash");
+  const sheetEl = document.getElementById("flying-sheet");
+  const sceneEl = document.getElementById("scene");
+  const stageEl = document.getElementById("stage");
+  const sendBtn = document.getElementById("send-btn");
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  let current = 0;
+  let busy = false;
+  pageEl.innerHTML = PAGES[0];
+
+  // Subtle ambient ink motes drifting along the flight arc on Canvas
+  const canvas = document.getElementById("ink-fx");
+  const ctx = canvas.getContext("2d");
+  let particles = [];
+
+  function resizeCanvas() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = window.innerWidth * dpr;
+    canvas.height = window.innerHeight * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  resizeCanvas();
+  window.addEventListener("resize", resizeCanvas);
+
+  function spawnInkBurst() {
+    if (reduceMotion) return;
+    const rect = sceneEl.getBoundingClientRect();
+    const cx = rect.left + rect.width * 0.45;
+    const cy = rect.top + rect.height * 0.42;
+    for (let i = 0; i < 22; i++) {
+      const t = Math.random();
+      particles.push({
+        x: cx - 180 * (1 - t) + (Math.random() - 0.5) * 34,
+        y: cy - 95 * (1 - t) + (Math.random() - 0.5) * 28,
+        vx: 1.6 + Math.random() * 2.2,
+        vy: 0.7 + Math.random() * 1.4,
+        r: 1 + Math.random() * 2,
+        life: 1,
+        decay: 0.018 + Math.random() * 0.016,
+        color: Math.random() > 0.35 ? "30, 77, 140" : "23, 22, 20"
+      });
+    }
+  }
+
+  function tickParticles() {
+    ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vx *= 0.98;
+      p.vy *= 0.98;
+      p.life -= p.decay;
+      if (p.life <= 0) {
+        particles.splice(i, 1);
+        continue;
+      }
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(${p.color}, ${p.life * 0.45})`;
+      ctx.fill();
+    }
+    requestAnimationFrame(tickParticles);
+  }
+  requestAnimationFrame(tickParticles);
+
+  function sendNextPage() {
+    if (busy) return;
+    busy = true;
+    current = (current + 1) % PAGES.length;
+
+    if (reduceMotion) {
+      pageEl.innerHTML = PAGES[current];
+      busy = false;
+      return;
+    }
+
+    sheetEl.classList.remove("soar");
+    void sheetEl.offsetWidth;
+    sheetEl.classList.add("soar");
+    spawnInkBurst();
+
+    setTimeout(() => {
+      flashEl.classList.remove("refreshing");
+      void flashEl.offsetWidth;
+      flashEl.classList.add("refreshing");
+      pageEl.innerHTML = PAGES[current];
+    }, 820);
+
+    setTimeout(() => { busy = false; }, 1380);
+  }
+
+  // Trigger on click, button, Space, or Opt+Cmd+R
+  stageEl.addEventListener("click", sendNextPage);
+  sendBtn.addEventListener("click", sendNextPage);
+  window.addEventListener("keydown", (e) => {
+    if (e.code === "Space" || (e.metaKey && e.altKey && e.code === "KeyR")) {
+      e.preventDefault();
+      sendNextPage();
+    }
+  });
+
+  // Gentle automatic cycle so the piece breathes on its own
+  if (!reduceMotion) {
+    setInterval(sendNextPage, 5800);
+  }
+
+  // Sculptural 3D mouse-orbit response
+  if (!reduceMotion) {
+    window.addEventListener("mousemove", (e) => {
+      const nx = e.clientX / window.innerWidth - 0.5;
+      const ny = e.clientY / window.innerHeight - 0.5;
+      const rx = 18 - ny * 14;
+      const ry = -18 + nx * 18;
+      sceneEl.style.transform = `rotateX(${rx.toFixed(2)}deg) rotateY(${ry.toFixed(2)}deg) rotateZ(4deg)`;
+    });
+    window.addEventListener("mouseleave", () => {
+      sceneEl.style.transform = "rotateX(18deg) rotateY(-18deg) rotateZ(4deg)";
+    });
+  }
+</script>
+
+</body>
+</html>
