@@ -381,11 +381,11 @@ function drawSchematicBackground(t, pulse) {
 
   // Subtle tilted orbital ellipses with tiny dots gliding around the scene
   const ORBITS = [
-    { cx: qx, cy: qy, rx: 190, ry: 74,  tilt: -0.32, speed:  0.42, dots: 2, col: 'rgba(29, 78, 137, 0.16)', dotCol: 'rgba(29, 78, 137, 0.55)', dash: [3, 6] },
-    { cx: qx, cy: qy, rx: 245, ry: 96,  tilt:  0.48, speed: -0.31, dots: 2, col: 'rgba(24, 23, 21, 0.10)', dotCol: 'rgba(24, 23, 21, 0.45)', dash: [2, 7] },
-    { cx: qx, cy: qy, rx: 320, ry: 122, tilt: -0.14, speed:  0.22, dots: 1, col: 'rgba(29, 78, 137, 0.11)', dotCol: 'rgba(29, 78, 137, 0.48)', dash: [4, 8] },
-    { cx: (qx + rx) * 0.5, cy: qy, rx: (rx - qx) * 0.62, ry: 118, tilt: -0.10, speed: 0.27, dots: 2, col: 'rgba(24, 23, 21, 0.085)', dotCol: 'rgba(29, 78, 137, 0.45)', dash: [2, 6] },
-    { cx: (sx + qx) * 0.52, cy: qy, rx: (qx - sx) * 0.78, ry: 132, tilt: 0.24, speed: -0.24, dots: 1, col: 'rgba(24, 23, 21, 0.08)', dotCol: 'rgba(24, 23, 21, 0.40)', dash: [3, 7] }
+    { cx: qx, cy: qy, rx: 190, ry: 74,  tilt: -0.32, speed:  0.42, dots: 2, col: 'rgba(29, 78, 137, 0.12)', dotCol: 'rgba(29, 78, 137, 0.28)', dash: [3, 6] },
+    { cx: qx, cy: qy, rx: 245, ry: 96,  tilt:  0.48, speed: -0.31, dots: 2, col: 'rgba(24, 23, 21, 0.08)', dotCol: 'rgba(24, 23, 21, 0.22)', dash: [2, 7] },
+    { cx: qx, cy: qy, rx: 320, ry: 122, tilt: -0.14, speed:  0.22, dots: 1, col: 'rgba(29, 78, 137, 0.09)', dotCol: 'rgba(29, 78, 137, 0.24)', dash: [4, 8] },
+    { cx: (qx + rx) * 0.5, cy: qy, rx: (rx - qx) * 0.62, ry: 118, tilt: -0.10, speed: 0.27, dots: 2, col: 'rgba(24, 23, 21, 0.07)', dotCol: 'rgba(29, 78, 137, 0.22)', dash: [2, 6] },
+    { cx: (sx + qx) * 0.52, cy: qy, rx: (qx - sx) * 0.78, ry: 132, tilt: 0.24, speed: -0.24, dots: 1, col: 'rgba(24, 23, 21, 0.065)', dotCol: 'rgba(24, 23, 21, 0.20)', dash: [3, 7] }
   ];
   ORBITS.forEach((o, oi) => {
     bctx.save();
@@ -405,7 +405,7 @@ function drawSchematicBackground(t, pulse) {
       const dy = Math.sin(a) * o.ry;
       bctx.fillStyle = o.dotCol;
       bctx.beginPath();
-      bctx.arc(dx, dy, 2.2, 0, Math.PI * 2);
+      bctx.arc(dx, dy, 1.6, 0, Math.PI * 2);
       bctx.fill();
       // Faint hairline halo around the primary dot
       if (d === 0) {
@@ -660,9 +660,9 @@ quillGroup.add(ringB);
 
 const quillOrbits3D = [];
 [
-  { rx: 0.96, ry: 0.42, tiltX:  0.58, tiltY:  0.22, tiltZ: -0.34, speed:  0.85, col: '#1D4E89', op: 0.34, dots: 2 },
-  { rx: 1.12, ry: 0.48, tiltX: -0.48, tiltY: -0.26, tiltZ:  0.46, speed: -0.62, col: '#181715', op: 0.24, dots: 2 },
-  { rx: 0.86, ry: 0.36, tiltX:  0.72, tiltY: -0.18, tiltZ:  0.14, speed:  1.05, col: '#1D4E89', op: 0.28, dots: 1 }
+  { rx: 0.96, ry: 0.42, tiltX:  0.58, tiltY:  0.22, tiltZ: -0.34, speed:  0.85, col: '#1D4E89', op: 0.20, dotOp: 0.34, dots: 2 },
+  { rx: 1.12, ry: 0.48, tiltX: -0.48, tiltY: -0.26, tiltZ:  0.46, speed: -0.62, col: '#181715', op: 0.15, dotOp: 0.26, dots: 2 },
+  { rx: 0.86, ry: 0.36, tiltX:  0.72, tiltY: -0.18, tiltZ:  0.14, speed:  1.05, col: '#1D4E89', op: 0.17, dotOp: 0.30, dots: 1 }
 ].forEach((o, oi) => {
   const og = new THREE.Group();
   og.rotation.set(o.tiltX, o.tiltY, o.tiltZ);
@@ -681,8 +681,8 @@ const quillOrbits3D = [];
   const dotMeshes = [];
   for (let d = 0; d < o.dots; d++) {
     const dm = new THREE.Mesh(
-      new THREE.SphereGeometry(0.022, 10, 10),
-      new THREE.MeshBasicMaterial({ color: o.col })
+      new THREE.SphereGeometry(0.015, 10, 10),
+      new THREE.MeshBasicMaterial({ color: o.col, transparent: true, opacity: o.dotOp, depthWrite: false })
     );
     og.add(dm);
     dotMeshes.push(dm);
