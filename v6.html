@@ -301,29 +301,96 @@ function drawSchematicBackground(t, pulse) {
   const ry = bgH * 0.48 + mouseNY * -6;
 
   // Recursive fractal compass geometry centered behind the Quill Entity
-  drawFractalRosette(qx, qy, Math.min(bgW, bgH) * 0.27, 6, t * 0.045, 0.085 + pulse * 0.04);
+  drawFractalRosette(qx, qy, Math.min(bgW, bgH) * 0.27, 6, t * 0.045, 0.09 + pulse * 0.045);
 
-  // Fine technical crosshairs & horizontal/vertical datum lines
-  bctx.strokeStyle = 'rgba(24, 23, 21, 0.085)';
-  bctx.lineWidth = 0.8;
-  bctx.setLineDash([6, 6]);
+  // Subtle architectural diagonal construction lines + outer orbital drafting arcs
+  bctx.strokeStyle = 'rgba(24, 23, 21, 0.055)';
+  bctx.lineWidth = 0.75;
+  bctx.setLineDash([3, 9]);
+  bctx.lineDashOffset = -t * 14;
+  bctx.beginPath();
+  bctx.moveTo(0, qy - bgH * 0.34); bctx.lineTo(bgW, qy + bgH * 0.22);
+  bctx.moveTo(0, qy + bgH * 0.32); bctx.lineTo(bgW, qy - bgH * 0.24);
+  bctx.stroke();
+
+  // Animated traveling schematic lines (horizontal datum + vertical anchors)
+  bctx.strokeStyle = 'rgba(24, 23, 21, 0.11)';
+  bctx.lineWidth = 0.85;
+  bctx.setLineDash([8, 6]);
+  bctx.lineDashOffset = -t * 22;
   bctx.beginPath();
   bctx.moveTo(36, qy); bctx.lineTo(bgW - 36, qy);
+  bctx.stroke();
+
+  // Secondary parallel schematic rails above & below the main datum
+  bctx.strokeStyle = 'rgba(24, 23, 21, 0.065)';
+  bctx.lineWidth = 0.7;
+  bctx.setLineDash([4, 8]);
+  bctx.lineDashOffset = t * 16;
+  bctx.beginPath();
+  bctx.moveTo(64, qy - 120); bctx.lineTo(bgW - 64, qy - 120);
+  bctx.moveTo(64, qy + 120); bctx.lineTo(bgW - 64, qy + 120);
+  bctx.stroke();
+
+  // Vertical anchor lines
+  bctx.strokeStyle = 'rgba(24, 23, 21, 0.085)';
+  bctx.setLineDash([6, 6]);
+  bctx.lineDashOffset = -t * 10;
+  bctx.beginPath();
   bctx.moveTo(sx, 62); bctx.lineTo(sx, bgH - 62);
   bctx.moveTo(qx, 42); bctx.lineTo(qx, bgH - 42);
   bctx.moveTo(rx, 42); bctx.lineTo(rx, bgH - 42);
   bctx.stroke();
+  bctx.lineDashOffset = 0;
 
-  // Concentric dotted arcs radiating from Quill toward the tablet
+  // Fine architectural Vernier tick ruler along upper & lower drafting bands
+  bctx.setLineDash([]);
+  bctx.strokeStyle = 'rgba(24, 23, 21, 0.12)';
+  bctx.lineWidth = 0.75;
+  const tickStep = 24;
+  const tickShift = (t * 12) % tickStep;
+  bctx.beginPath();
+  for (let x = 60 + tickShift; x < bgW - 60; x += tickStep) {
+    const major = Math.round((x - tickShift) / tickStep) % 5 === 0;
+    const hTick = major ? 9 : 4;
+    bctx.moveTo(x, 62); bctx.lineTo(x, 62 + hTick);
+    bctx.moveTo(x, bgH - 62); bctx.lineTo(x, bgH - 62 - hTick);
+  }
+  bctx.stroke();
+
+  // Concentric dotted arcs radiating from Quill toward the tablet + live orbital ticks
   bctx.setLineDash([2, 6]);
-  bctx.strokeStyle = 'rgba(29, 78, 137, 0.15)';
-  [145, 210, 280].forEach((r, i) => {
-    const start = -0.62 + Math.sin(t * 0.3 + i) * 0.08;
-    const end = 0.62 + Math.sin(t * 0.3 + i) * 0.08;
+  bctx.strokeStyle = 'rgba(29, 78, 137, 0.18)';
+  bctx.lineWidth = 0.9;
+  [145, 210, 280, 355].forEach((r, i) => {
+    const start = -0.68 + Math.sin(t * 0.35 + i) * 0.1;
+    const end = 0.68 + Math.sin(t * 0.35 + i) * 0.1;
     bctx.beginPath();
     bctx.arc(qx, qy, r, start, end);
     bctx.stroke();
+
+    // Small traveling schematic bead riding each arc
+    const ang = start + ((t * (0.28 + i * 0.06) + i * 0.37) % 1) * (end - start);
+    const bx = qx + Math.cos(ang) * r;
+    const by = qy + Math.sin(ang) * r;
+    bctx.fillStyle = 'rgba(29, 78, 137, 0.42)';
+    bctx.beginPath();
+    bctx.arc(bx, by, 2.0, 0, Math.PI * 2);
+    bctx.fill();
   });
+
+  // Living signal ticks gliding across the horizontal datum line
+  for (let k = 0; k < 3; k++) {
+    const u = ((t * 0.16 + k * 0.333) % 1);
+    const px = 48 + u * (bgW - 96);
+    bctx.strokeStyle = 'rgba(29, 78, 137, 0.36)';
+    bctx.lineWidth = 1.0;
+    bctx.setLineDash([]);
+    bctx.beginPath();
+    bctx.moveTo(px - 7, qy); bctx.lineTo(px + 7, qy);
+    bctx.moveTo(px, qy - 4); bctx.lineTo(px, qy + 4);
+    bctx.stroke();
+  }
 
   // Crisp schematic dimension line + arrowheads across Agents → Quill → reMarkable
   const dimY = Math.min(bgH - 130, qy + Math.min(bgW, bgH) * 0.27);
@@ -423,7 +490,24 @@ function roundedRectShape(w, h, r) {
 }
 
 // Helper: dashed 3D circle ring
-function makeDashedRing(radius, dashSize, gapSize, color, opacity = 0.65) {
+function makeSoftShadowTex() {
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 256;
+  const ctx = c.getContext('2d');
+  const g = ctx.createRadialGradient(128, 128, 12, 128, 128, 124);
+  g.addColorStop(0.0, 'rgba(24, 23, 21, 0.24)');
+  g.addColorStop(0.45, 'rgba(24, 23, 21, 0.10)');
+  g.addColorStop(0.78, 'rgba(24, 23, 21, 0.025)');
+  g.addColorStop(1.0, 'rgba(24, 23, 21, 0.0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 256, 256);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+const softShadowTex = makeSoftShadowTex();
+
+function makeDashedRing(radius, dashSize, gapSize, color, opacity = 0.55) {
   const pts = [];
   const segs = 96;
   for (let i = 0; i <= segs; i++) {
@@ -461,6 +545,14 @@ const qSlabMat = new THREE.MeshStandardMaterial({
 });
 const qSlab = new THREE.Mesh(qSlabGeo, qSlabMat);
 quillGroup.add(qSlab);
+
+// Soft ambient drop shadow behind/below Quill squircle
+const quillShadow = new THREE.Mesh(
+  new THREE.PlaneGeometry(1.55, 1.55),
+  new THREE.MeshBasicMaterial({ map: softShadowTex, transparent: true, opacity: 0.78, depthWrite: false })
+);
+quillShadow.position.set(0.08, -0.14, -0.18);
+quillGroup.add(quillShadow);
 
 // Precision CAD wireframe edge outline around the Quill app icon
 const qEdgesMat = new THREE.LineBasicMaterial({ color: '#181715', transparent: true, opacity: 0.52 });
@@ -524,6 +616,14 @@ rmGroup.position.set(2.05, 0.02, -0.35);
 rmGroup.scale.setScalar(1.42);
 rmGroup.rotation.set(0.06, -0.36, -0.015);
 worldGroup.add(rmGroup);
+
+// Soft architectural drop shadow behind the Paper Pro chassis
+const rmShadow = new THREE.Mesh(
+  new THREE.PlaneGeometry(2.65, 3.25),
+  new THREE.MeshBasicMaterial({ map: softShadowTex, transparent: true, opacity: 0.85, depthWrite: false })
+);
+rmShadow.position.set(0.14, -0.18, -0.22);
+rmGroup.add(rmShadow);
 
 const W = 1.62;
 const H = 2.26; // exact 196.6 : 274.1 aspect ratio
@@ -752,7 +852,7 @@ const AGENT_SEEDS = [
   { x: -2.25, y:  0.72, z:  0.30, phase: 2.9, speed: 1.15 }
 ];
 
-const agentOctaGeo = new THREE.OctahedronGeometry(0.11, 0);
+const agentOctaGeo = new THREE.OctahedronGeometry(0.125, 0);
 const agentWireGeo = new THREE.EdgesGeometry(agentOctaGeo);
 const agentNodes = [];
 
@@ -760,17 +860,30 @@ AGENT_SEEDS.forEach((s) => {
   const g = new THREE.Group();
   g.position.set(s.x, s.y, s.z);
 
+  // High-contrast dark faceted charcoal core + rotating wireframe edges parented directly to it
   const core = new THREE.Mesh(
     agentOctaGeo,
-    new THREE.MeshStandardMaterial({ color: '#FAF8F2', roughness: 0.55, metalness: 0.08 })
+    new THREE.MeshStandardMaterial({
+      color: '#222429',
+      roughness: 0.34,
+      metalness: 0.25,
+      flatShading: true
+    })
   );
+  const wireMat = new THREE.LineBasicMaterial({ color: '#FAF8F2', transparent: true, opacity: 0.88 });
+  core.add(new THREE.LineSegments(agentWireGeo, wireMat));
   g.add(core);
 
-  const wireMat = new THREE.LineBasicMaterial({ color: '#181715', transparent: true, opacity: 0.72 });
-  g.add(new THREE.LineSegments(agentWireGeo, wireMat));
+  // Soft drop shadow behind each agent node
+  const nodeShadow = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.38, 0.38),
+    new THREE.MeshBasicMaterial({ map: softShadowTex, transparent: true, opacity: 0.55, depthWrite: false })
+  );
+  nodeShadow.position.set(0.03, -0.05, -0.14);
+  g.add(nodeShadow);
 
-  // Delicate dotted halo around each agent
-  const halo = makeDashedRing(0.19, 0.02, 0.03, '#1D4E89', 0.36);
+  // Crisp outer dotted halo around each agent
+  const halo = makeDashedRing(0.21, 0.024, 0.03, '#1D4E89', 0.48);
   g.add(halo);
 
   // Faint dotted schematic tether line to Quill
@@ -1107,10 +1220,12 @@ function animate() {
 
     if (a.pingGlow > 0.01) {
       a.pingGlow *= 0.92;
-      a.wireMat.color.set('#1D4E89');
+      a.core.material.color.set('#1D4E89');
+      a.wireMat.color.set('#FFFFFF');
       a.group.scale.setScalar(1 + a.pingGlow * 0.25);
     } else {
-      a.wireMat.color.set('#181715');
+      a.core.material.color.set('#222429');
+      a.wireMat.color.set('#FAF8F2');
       a.group.scale.setScalar(1);
     }
   });
