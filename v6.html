@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quill — macOS to reMarkable</title>
+<meta name="description" content="A macOS menu-bar utility that sends Markdown, web articles, PDFs, and EPUBs directly to your reMarkable.">
+<link rel="icon" type="image/png" href="assets/quill-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"
+  }
+}
+</script>
+<style>
+  :root {
+    --cream: #F7F5EF;
+    --cream-deep: #EFECE3;
+    --ink: #181715;
+    --ink-soft: #4F4C45;
+    --ink-faint: #8C877C;
+    --rule: #DAD4C8;
+    --cobalt: #1D4E89;
+    --serif: "Instrument Serif", Georgia, serif;
+    --sans: "DM Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, monospace;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: var(--cream);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    user-select: none;
+  }
+
+  /* 2D Schematic Drafting & Fractal Background Canvas (behind Three.js) */
+  #schematic-bg {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100dvh;
+    display: block;
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  /* 3D Technical Three.js Canvas (transparent over schematic background) */
+  #webgl {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100dvh;
+    display: block;
+    z-index: 2;
+    cursor: grab;
+  }
+  #webgl:active { cursor: grabbing; }
+
+  /* Minimal Drafting Frame Corners */
+  .frame-marks {
+    position: fixed;
+    inset: 18px;
+    border: 1px dashed rgba(24, 23, 21, 0.10);
+    pointer-events: none;
+    z-index: 5;
+  }
+
+  header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 10;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 30px 44px;
+    pointer-events: none;
+  }
+  .wordmark {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--ink);
+    text-decoration: none;
+    pointer-events: auto;
+  }
+  .wordmark svg { width: 16px; height: 16px; color: var(--ink); }
+  .wordmark span {
+    font-family: var(--serif);
+    font-size: 24px;
+    letter-spacing: 0.01em;
+  }
+  .spec-code {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.14em;
+    color: var(--ink-faint);
+    text-transform: uppercase;
+  }
+
+  footer {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 0 32px 34px;
+    gap: 14px;
+    pointer-events: none;
+  }
+  h1 {
+    font-family: var(--sans);
+    font-size: clamp(16px, 1.85vw, 21px);
+    font-weight: 400;
+    line-height: 1.45;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+    max-width: 680px;
+    text-wrap: balance;
+    background: rgba(247, 245, 239, 0.78);
+    padding: 6px 16px;
+    border-radius: 6px;
+  }
+  h1 strong {
+    font-weight: 500;
+    color: var(--cobalt);
+  }
+
+  .controls {
+    display: inline-flex;
+    align-items: center;
+    gap: 14px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-faint);
+    pointer-events: auto;
+  }
+  .key-btn {
+    appearance: none;
+    background: #FFFFFF;
+    border: 1px solid #C8C1B4;
+    border-bottom-width: 2px;
+    border-radius: 5px;
+    padding: 4px 10px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink);
+    cursor: pointer;
+    transition: transform 0.1s ease, border-color 0.15s ease, color 0.15s ease;
+  }
+  .key-btn:hover { border-color: var(--cobalt); color: var(--cobalt); }
+  .key-btn:active { transform: translateY(1px); }
+  .controls a {
+    color: var(--ink-soft);
+    text-decoration: none;
+    border-bottom: 1px dashed var(--rule);
+  }
+  .controls a:hover { color: var(--ink); border-color: var(--ink); }
+
+  @media (max-width: 640px) {
+    .frame-marks { inset: 10px; }
+    header { padding: 20px 22px; }
+    footer { padding: 0 20px 24px; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="schematic-bg" aria-hidden="true"></canvas>
+<canvas id="webgl"></canvas>
+<div class="frame-marks" aria-hidden="true"></div>
+
+<header>
+  <a class="wordmark" href="#">
+    <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+      <path d="M15.807.531c-.174-.177-.41-.289-.64-.363a3.765 3.765 0 0 0-.833-.15c-.62-.049-1.394 0-2.252.175C10.365.545 8.264 1.415 6.315 3.1c-1.95 1.686-3.168 3.724-3.758 5.423-.294.847-.44 1.634-.429 2.268.005.316.05.62.154.88q.025.061.056.122A68 68 0 0 0 .08 15.198a.528.528 0 0 0 .157.72.504.504 0 0 0 .705-.16 67.6 67.6 0 0 1 2.158-3.26c.285.141.616.195.958.182.513-.02 1.098-.188 1.723-.49 1.25-.605 2.744-1.787 4.303-3.642l1.518-1.55a.53.53 0 0 0 0-.739l-.729-.744 1.311.209a.5.5 0 0 0 .443-.15l.663-.684c.663-.68 1.292-1.325 1.763-1.892.314-.378.585-.752.754-1.107.163-.345.278-.773.112-1.188a.5.5 0 0 0-.112-.172"/>
+    </svg>
+    <span>Quill</span>
+  </a>
+  <span class="spec-code">MACOS · SYNC V3 · FIG. 01</span>
+</header>
+
+<footer>
+  <h1>A macOS menu-bar utility that sends <strong>Markdown, web articles, PDFs, and EPUBs</strong> directly to your reMarkable.</h1>
+  <div class="controls">
+    <button class="key-btn" id="send-btn" type="button">⌥⌘R · dispatch</button>
+    <span>drag to inspect</span>
+    <span>·</span>
+    <a href="https://github.com/pasevin">GitHub</a>
+  </div>
+</footer>
+
+<script type="module">
+import * as THREE from 'three';
+
+// ══════════════════════════════════════════════════════════════════════
+// 1. LIVING 2D TECHNICAL SCHEMATIC & RECURSIVE FRACTAL CANVAS
+// ══════════════════════════════════════════════════════════════════════
+const bgCanvas = document.getElementById('schematic-bg');
+const bctx = bgCanvas.getContext('2d');
+let bgW = window.innerWidth, bgH = window.innerHeight;
+let mouseNX = 0, mouseNY = 0;
+
+function resizeBg() {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  bgW = window.innerWidth;
+  bgH = window.innerHeight;
+  bgCanvas.width = bgW * dpr;
+  bgCanvas.height = bgH * dpr;
+  bctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+resizeBg();
+
+// Subtle recursive geometric fractal (nested rotated drafting squares & arcs)
+function drawFractalRosette(cx, cy, radius, depth, angle, alpha) {
+  if (depth <= 0 || radius < 16) return;
+  bctx.save();
+  bctx.translate(cx, cy);
+  bctx.rotate(angle);
+
+  bctx.strokeStyle = `rgba(24, 23, 21, ${alpha})`;
+  bctx.lineWidth = 0.75;
+  bctx.setLineDash(depth % 2 === 0 ? [3, 5] : [1, 4]);
+  bctx.strokeRect(-radius, -radius, radius * 2, radius * 2);
+
+  bctx.setLineDash([]);
+  bctx.strokeStyle = `rgba(29, 78, 137, ${alpha * 0.65})`;
+  bctx.beginPath();
+  bctx.arc(0, 0, radius, 0, Math.PI * 2);
+  bctx.stroke();
+
+  bctx.restore();
+  drawFractalRosette(cx, cy, radius * 0.7071, depth - 1, angle + Math.PI / 4, alpha * 0.86);
+}
+
+function drawSchematicBackground(t, pulse) {
+  bctx.fillStyle = '#F7F5EF';
+  bctx.fillRect(0, 0, bgW, bgH);
+
+  // Subtle radial cream warmth
+  const rad = bctx.createRadialGradient(bgW * 0.42, bgH * 0.48, 40, bgW * 0.48, bgH * 0.5, Math.max(bgW, bgH) * 0.72);
+  rad.addColorStop(0, '#FDFCF8');
+  rad.addColorStop(1, '#F1EDE3');
+  bctx.fillStyle = rad;
+  bctx.fillRect(0, 0, bgW, bgH);
+
+  // Dotted drafting grid
+  const step = 36;
+  const ox = (mouseNX * -10) % step;
+  const oy = (mouseNY * -10) % step;
+  bctx.fillStyle = 'rgba(24, 23, 21, 0.13)';
+  for (let x = ox; x < bgW; x += step) {
+    for (let y = oy; y < bgH; y += step) {
+      bctx.fillRect(x, y, 1.15, 1.15);
+    }
+  }
+
+  // Anchor coordinates aligned to Quill (left-center) and reMarkable (right)
+  const qx = bgW * 0.39 + mouseNX * -12;
+  const qy = bgH * 0.48 + mouseNY * -10;
+  const rx = bgW * 0.74 + mouseNX * -6;
+  const ry = bgH * 0.48 + mouseNY * -6;
+
+  // Recursive fractal compass geometry centered behind the Quill Entity
+  drawFractalRosette(qx, qy, Math.min(bgW, bgH) * 0.31, 6, t * 0.045, 0.095 + pulse * 0.04);
+
+  // Fine technical crosshairs & horizontal/vertical datum lines
+  bctx.strokeStyle = 'rgba(24, 23, 21, 0.09)';
+  bctx.lineWidth = 0.8;
+  bctx.setLineDash([6, 6]);
+  bctx.beginPath();
+  bctx.moveTo(36, qy); bctx.lineTo(bgW - 36, qy);
+  bctx.moveTo(qx, 42); bctx.lineTo(qx, bgH - 42);
+  bctx.moveTo(rx, 42); bctx.lineTo(rx, bgH - 42);
+  bctx.stroke();
+
+  // Concentric dotted arcs radiating from Quill toward the tablet
+  bctx.setLineDash([2, 6]);
+  bctx.strokeStyle = 'rgba(29, 78, 137, 0.16)';
+  [165, 235, 310].forEach((r, i) => {
+    const start = -0.65 + Math.sin(t * 0.3 + i) * 0.08;
+    const end = 0.65 + Math.sin(t * 0.3 + i) * 0.08;
+    bctx.beginPath();
+    bctx.arc(qx, qy, r, start, end);
+    bctx.stroke();
+  });
+
+  // Crisp schematic dimension line + arrowheads between Quill & reMarkable
+  const dimY = Math.min(bgH - 130, qy + Math.min(bgW, bgH) * 0.27);
+  bctx.setLineDash([]);
+  bctx.strokeStyle = 'rgba(24, 23, 21, 0.22)';
+  bctx.lineWidth = 0.9;
+  bctx.beginPath();
+  bctx.moveTo(qx, dimY); bctx.lineTo(rx, dimY);
+  bctx.moveTo(qx, dimY - 6); bctx.lineTo(qx, dimY + 6);
+  bctx.moveTo(rx, dimY - 6); bctx.lineTo(rx, dimY + 6);
+  // Left & right arrows
+  bctx.moveTo(qx + 8, dimY - 3.5); bctx.lineTo(qx, dimY); bctx.lineTo(qx + 8, dimY + 3.5);
+  bctx.moveTo(rx - 8, dimY - 3.5); bctx.lineTo(rx, dimY); bctx.lineTo(rx - 8, dimY + 3.5);
+  bctx.stroke();
+
+  // Small technical labels on the drafting sheet
+  bctx.fillStyle = 'rgba(24, 23, 21, 0.42)';
+  bctx.font = '400 10px "JetBrains Mono", monospace';
+  bctx.fillText('A · QUILL ENTITY', qx - 48, dimY + 18);
+  bctx.fillText('B · PAPER PRO', rx - 40, dimY + 18);
+  bctx.fillStyle = 'rgba(29, 78, 137, 0.68)';
+  bctx.fillText('SYNC V3  →', (qx + rx) * 0.5 - 30, dimY - 8);
+
+  // Corner registration crosshairs
+  const marks = [[42, 76], [bgW - 42, 76], [42, bgH - 76], [bgW - 42, bgH - 76]];
+  bctx.strokeStyle = 'rgba(24, 23, 21, 0.28)';
+  bctx.lineWidth = 1;
+  marks.forEach(([mx, my]) => {
+    bctx.beginPath();
+    bctx.moveTo(mx - 6, my); bctx.lineTo(mx + 6, my);
+    bctx.moveTo(mx, my - 6); bctx.lineTo(mx, my + 6);
+    bctx.stroke();
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// 2. THREE.JS MINIMALIST TECHNICAL 3D STAGE
+// ══════════════════════════════════════════════════════════════════════
+const canvas = document.getElementById('webgl');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(34, window.innerWidth / window.innerHeight, 0.1, 50);
+camera.position.set(0.15, 0.18, 6.8);
+camera.lookAt(0.15, 0, 0);
+
+// Clean bright studio HDRI for subtle crisp brushed-aluminum sheen
+function buildCleanStudioEnv(renderer) {
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  const env = new THREE.Scene();
+  env.background = new THREE.Color('#F2EFE8');
+  const add = (w, h, col, pos, rot) => {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color: col, side: THREE.DoubleSide }));
+    m.position.set(...pos); m.rotation.set(...rot); env.add(m);
+  };
+  add(14, 14, new THREE.Color(1.9, 1.88, 1.82), [0, 7, 2], [Math.PI / 2, 0, 0]);
+  add(4, 12, new THREE.Color(2.2, 2.25, 2.35), [7, 1, 2], [0, -Math.PI / 2, 0]);
+  add(6, 12, new THREE.Color(0.28, 0.28, 0.30), [-7, 0, -2], [0, Math.PI / 2.4, 0]);
+  const rt = pmrem.fromScene(env, 0.04);
+  pmrem.dispose();
+  return rt.texture;
+}
+scene.environment = buildCleanStudioEnv(renderer);
+
+scene.add(new THREE.HemisphereLight('#FFFFFF', '#DDD6C8', 1.05));
+const dirLight = new THREE.DirectionalLight('#FFFDF9', 1.35);
+dirLight.position.set(-3, 5, 5);
+scene.add(dirLight);
+const rimLight = new THREE.DirectionalLight('#DCE8F7', 0.75);
+rimLight.position.set(4, 2, -3);
+scene.add(rimLight);
+
+const worldGroup = new THREE.Group();
+scene.add(worldGroup);
+
+function roundedRectShape(w, h, r) {
+  const s = new THREE.Shape();
+  const x = -w / 2, y = -h / 2;
+  s.moveTo(x + r, y);
+  s.lineTo(x + w - r, y);
+  s.quadraticCurveTo(x + w, y, x + w, y + r);
+  s.lineTo(x + w, y + h - r);
+  s.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  s.lineTo(x + r, y + h);
+  s.quadraticCurveTo(x, y + h, x, y + h - r);
+  s.lineTo(x, y + r);
+  s.quadraticCurveTo(x, y, x + r, y);
+  return s;
+}
+
+// Helper: dashed 3D circle ring
+function makeDashedRing(radius, dashSize, gapSize, color, opacity = 0.65) {
+  const pts = [];
+  const segs = 96;
+  for (let i = 0; i <= segs; i++) {
+    const a = (i / segs) * Math.PI * 2;
+    pts.push(new THREE.Vector3(Math.cos(a) * radius, Math.sin(a) * radius, 0));
+  }
+  const geo = new THREE.BufferGeometry().setFromPoints(pts);
+  const mat = new THREE.LineDashedMaterial({ color, dashSize, gapSize, transparent: true, opacity });
+  const line = new THREE.Line(geo, mat);
+  line.computeLineDistances();
+  return line;
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// A. CENTERPIECE HERO — QUILL TECHNICAL ENTITY (center-left)
+// ══════════════════════════════════════════════════════════════════════
+const quillGroup = new THREE.Group();
+quillGroup.position.set(-0.78, 0.06, 0.45);
+worldGroup.add(quillGroup);
+
+// Crisp matte architectural ceramic-ivory squircle slab
+const qSlabGeo = new THREE.ExtrudeGeometry(roundedRectShape(1.42, 1.42, 0.30), {
+  depth: 0.14,
+  bevelEnabled: true,
+  bevelThickness: 0.02,
+  bevelSize: 0.02,
+  bevelSegments: 4,
+  curveSegments: 24
+});
+qSlabGeo.translate(0, 0, -0.07);
+const qSlabMat = new THREE.MeshStandardMaterial({
+  color: '#FAF8F2',
+  roughness: 0.58,
+  metalness: 0.04
+});
+const qSlab = new THREE.Mesh(qSlabGeo, qSlabMat);
+quillGroup.add(qSlab);
+
+// Precision CAD wireframe edge outline around the Quill slab
+const qEdges = new THREE.LineSegments(
+  new THREE.EdgesGeometry(qSlabGeo, 26),
+  new THREE.LineBasicMaterial({ color: '#181715', transparent: true, opacity: 0.55 })
+);
+quillGroup.add(qEdges);
+
+// Outer wireframe drafting bounding box (slightly expanded, dashed)
+const cageGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(1.78, 1.78, 0.42));
+const cageMat = new THREE.LineDashedMaterial({ color: '#1D4E89', dashSize: 0.06, gapSize: 0.05, transparent: true, opacity: 0.48 });
+const cage = new THREE.LineSegments(cageGeo, cageMat);
+cage.computeLineDistances();
+quillGroup.add(cage);
+
+// Sculpted matte-ink 3D Feather Quill centered on the slab
+const vane = new THREE.Shape();
+vane.moveTo(-0.34, -0.40);
+vane.bezierCurveTo(-0.30, -0.04, -0.12, 0.32, 0.38, 0.50);
+vane.bezierCurveTo(0.26, 0.25, 0.16, 0.10, 0.06, 0.05);
+vane.lineTo(0.16, 0.01);
+vane.bezierCurveTo(0.05, -0.15, -0.11, -0.28, -0.34, -0.40);
+
+const featherGeo = new THREE.ExtrudeGeometry(vane, {
+  depth: 0.036,
+  bevelEnabled: true,
+  bevelThickness: 0.01,
+  bevelSize: 0.008,
+  bevelSegments: 3,
+  curveSegments: 24
+});
+featherGeo.translate(0, 0, -0.018);
+const featherMesh = new THREE.Mesh(
+  featherGeo,
+  new THREE.MeshStandardMaterial({ color: '#181715', roughness: 0.42, metalness: 0.18 })
+);
+featherMesh.position.set(0.02, 0.02, 0.11);
+quillGroup.add(featherMesh);
+
+// Cobalt drafting rachis spine & nib highlight
+const spineCurve = new THREE.CatmullRomCurve3([
+  new THREE.Vector3(-0.42, -0.48, 0.13),
+  new THREE.Vector3(-0.08, -0.08, 0.135),
+  new THREE.Vector3(0.36, 0.48, 0.13)
+]);
+quillGroup.add(new THREE.Mesh(
+  new THREE.TubeGeometry(spineCurve, 28, 0.011, 10, false),
+  new THREE.MeshBasicMaterial({ color: '#1D4E89' })
+));
+
+// Rotating schematic dashed & dotted rings around Quill
+const ringA = makeDashedRing(1.08, 0.07, 0.06, '#181715', 0.42);
+ringA.rotation.set(0.28, 0.22, 0);
+quillGroup.add(ringA);
+
+const ringB = makeDashedRing(1.26, 0.02, 0.05, '#1D4E89', 0.65);
+ringB.rotation.set(-0.35, -0.18, 0);
+quillGroup.add(ringB);
+
+// Expanding schematic pulse circle on dispatch
+const pulseCircles = [];
+function spawnSchematicPulse() {
+  const r = makeDashedRing(0.82, 0.06, 0.05, '#1D4E89', 0.78);
+  r.position.z = 0.08;
+  quillGroup.add(r);
+  pulseCircles.push({ line: r, age: 0 });
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// B. SECONDARY DESTINATION — REAL-REFERENCE reMarkable Paper Pro
+//    (196.6 × 274.1 mm, thin uniform top/side bezels, subtle chin,
+//     brushed silver unibody, flush cylindrical Marker Plus with
+//     smooth taper, metal tip, and top eraser cap)
+// ══════════════════════════════════════════════════════════════════════
+const rmGroup = new THREE.Group();
+rmGroup.position.set(2.05, -0.02, -0.55);
+rmGroup.rotation.set(0.08, -0.46, -0.02);
+worldGroup.add(rmGroup);
+
+const W = 1.62;
+const H = 2.26; // exact 196.6 : 274.1 aspect ratio
+const D = 0.042;
+const R = 0.068;
+
+const rmMetal = new THREE.MeshStandardMaterial({
+  color: '#C7C5C0',
+  metalness: 0.78,
+  roughness: 0.28,
+  envMapIntensity: 1.15
+});
+const rmBezelMat = new THREE.MeshStandardMaterial({
+  color: '#E6E4DF', // real Paper Pro pale silver-grey front bezel
+  roughness: 0.55,
+  metalness: 0.06
+});
+
+// Rounded aluminum unibody
+const rmBodyGeo = new THREE.ExtrudeGeometry(roundedRectShape(W, H, R), {
+  depth: D,
+  bevelEnabled: true,
+  bevelThickness: 0.006,
+  bevelSize: 0.006,
+  bevelSegments: 4,
+  curveSegments: 22
+});
+rmBodyGeo.translate(0, 0, -D / 2);
+rmGroup.add(new THREE.Mesh(rmBodyGeo, rmMetal));
+
+// Crisp hairline CAD silhouette around tablet
+rmGroup.add(new THREE.LineSegments(
+  new THREE.EdgesGeometry(rmBodyGeo, 30),
+  new THREE.LineBasicMaterial({ color: '#181715', transparent: true, opacity: 0.25 })
+));
+
+// Corrugated dual grooves on the silver side edge
+[-0.008, 0.008].forEach((zOff) => {
+  const gGeo = new THREE.ExtrudeGeometry(roundedRectShape(W + 0.008, H + 0.008, R + 0.002), {
+    depth: 0.003, bevelEnabled: false, curveSegments: 18
+  });
+  gGeo.translate(0, 0, zOff - 0.0015);
+  rmGroup.add(new THREE.Mesh(gGeo, new THREE.MeshStandardMaterial({ color: '#8C8982', metalness: 0.7, roughness: 0.4 })));
+});
+
+// Front pale-silver bezel plate
+const bezelPlate = new THREE.Mesh(
+  new THREE.ShapeGeometry(roundedRectShape(W - 0.018, H - 0.018, R - 0.008), 18),
+  rmBezelMat
+);
+bezelPlate.position.z = D / 2 + 0.0065;
+rmGroup.add(bezelPlate);
+
+// Top-left small recessed sensor/button detail (from real photo)
+const topDetail = new THREE.Mesh(
+  new THREE.CircleGeometry(0.016, 16),
+  new THREE.MeshBasicMaterial({ color: '#B6B3AC' })
+);
+topDetail.position.set(-W / 2 + 0.085, H / 2 - 0.048, D / 2 + 0.0072);
+rmGroup.add(topDetail);
+
+// Matte E-Ink Display (thin uniform top/left/right bezels, subtle wider bottom chin)
+const scrW = W - 0.125;
+const scrH = H - 0.22;
+const scrY = 0.046; // subtle authentic Paper Pro bottom chin
+
+const scrCanvas = document.createElement('canvas');
+scrCanvas.width = 768; scrCanvas.height = 1024;
+const sctx = scrCanvas.getContext('2d');
+const scrTex = new THREE.CanvasTexture(scrCanvas);
+scrTex.colorSpace = THREE.SRGBColorSpace;
+
+const scrMesh = new THREE.Mesh(
+  new THREE.PlaneGeometry(scrW, scrH),
+  new THREE.MeshStandardMaterial({ map: scrTex, roughness: 0.84, metalness: 0.0 })
+);
+scrMesh.position.set(0, scrY, D / 2 + 0.0074);
+rmGroup.add(scrMesh);
+
+// Hairline border around active e-ink display
+rmGroup.add(new THREE.LineLoop(
+  new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(-scrW / 2, scrY - scrH / 2, D / 2 + 0.008),
+    new THREE.Vector3( scrW / 2, scrY - scrH / 2, D / 2 + 0.008),
+    new THREE.Vector3( scrW / 2, scrY + scrH / 2, D / 2 + 0.008),
+    new THREE.Vector3(-scrW / 2, scrY + scrH / 2, D / 2 + 0.008)
+  ]),
+  new THREE.LineBasicMaterial({ color: '#A5A096', transparent: true, opacity: 0.75 })
+));
+
+// ── Accurate 3D Marker Plus (built from real Elkjøp product photo!) ─
+// Slim ~1:13 cylinder, matte charcoal barrel, smooth gradual taper,
+// fine machined metal conical tip, flat-domed top eraser cap with subtle seam
+const penGroup = new THREE.Group();
+const penBodyMat = new THREE.MeshStandardMaterial({ color: '#242423', roughness: 0.72, metalness: 0.06 });
+const penSeamMat = new THREE.MeshStandardMaterial({ color: '#454442', roughness: 0.50, metalness: 0.35 });
+const penTipMetal = new THREE.MeshStandardMaterial({ color: '#3E3E3C', roughness: 0.32, metalness: 0.65 });
+
+const penR = 0.032; // slender authentic diameter
+const barrelLen = 1.24;
+
+// 1. Main straight cylindrical matte-charcoal barrel
+const barrel = new THREE.Mesh(new THREE.CylinderGeometry(penR, penR, barrelLen, 28), penBodyMat);
+penGroup.add(barrel);
+
+// 2. Subtle top seam ring + rounded-flat eraser cap
+const seam = new THREE.Mesh(new THREE.CylinderGeometry(penR * 1.01, penR * 1.01, 0.012, 28), penSeamMat);
+seam.position.y = barrelLen / 2 + 0.006;
+penGroup.add(seam);
+
+const eraserBody = new THREE.Mesh(new THREE.CylinderGeometry(penR * 0.99, penR, 0.12, 28), penBodyMat);
+eraserBody.position.y = barrelLen / 2 + 0.072;
+penGroup.add(eraserBody);
+
+const eraserDome = new THREE.Mesh(
+  new THREE.SphereGeometry(penR * 0.99, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2),
+  penBodyMat
+);
+eraserDome.scale.y = 0.38; // flat-domed authentic Marker Plus top
+eraserDome.position.y = barrelLen / 2 + 0.132;
+penGroup.add(eraserDome);
+
+// 3. Smooth gradual barrel taper (bottom 15%)
+const taperLen = 0.18;
+const taper = new THREE.Mesh(new THREE.CylinderGeometry(penR, penR * 0.42, taperLen, 28), penBodyMat);
+taper.position.y = -barrelLen / 2 - taperLen / 2;
+penGroup.add(taper);
+
+// 4. Long, fine conical machined writing tip
+const tipLen = 0.14;
+const tipCone = new THREE.Mesh(new THREE.ConeGeometry(penR * 0.42, tipLen, 24), penTipMetal);
+tipCone.rotation.x = Math.PI; // point downward!
+tipCone.position.y = -barrelLen / 2 - taperLen - tipLen / 2;
+penGroup.add(tipCone);
+
+// Dock Marker Plus flush against right edge, pointing downward (aligned near top-right)
+penGroup.position.set(W / 2 + penR + 0.008, 0.06, 0.002);
+rmGroup.add(penGroup);
+
+// ── E-Ink Screen Renderer ───────────────────────────────────────────
+const DOCS = [
+  { ext: '.MD',   title: 'Architecture',    tag: 'V6 NOTEBOOK', color: '#1D4E89' },
+  { ext: 'HTML',  title: 'On Quiet Tools',  tag: 'ARTICLE',     color: '#A8422B' },
+  { ext: '.PDF',  title: 'Spatial Paper',   tag: 'RAW CPAGES',  color: '#2B624B' },
+  { ext: '.EPUB', title: 'Field Notes',     tag: 'RAW EPUB',    color: '#4F4C45' }
+];
+
+function drawRMPage(idx, flash = 0) {
+  const doc = DOCS[idx % DOCS.length];
+  const cw = scrCanvas.width, ch = scrCanvas.height;
+  sctx.fillStyle = '#F2F0EA';
+  sctx.fillRect(0, 0, cw, ch);
+
+  // Subtle recessed inner shadow
+  sctx.strokeStyle = 'rgba(24,23,21,0.08)';
+  sctx.lineWidth = 10;
+  sctx.strokeRect(0, 0, cw, ch);
+
+  sctx.fillStyle = '#78736A';
+  sctx.font = '500 20px "JetBrains Mono", monospace';
+  sctx.fillText(`${doc.ext}  ·  ${doc.tag}`, 58, 72);
+  sctx.strokeStyle = '#D8D3C8';
+  sctx.lineWidth = 2;
+  sctx.beginPath(); sctx.moveTo(58, 94); sctx.lineTo(cw - 58, 94); sctx.stroke();
+
+  sctx.fillStyle = '#181715';
+  sctx.font = '400 66px "Instrument Serif", Georgia, serif';
+  sctx.fillText(doc.title, 58, 184);
+
+  // Crisp colored ink rule
+  sctx.strokeStyle = doc.color;
+  sctx.lineWidth = 4;
+  sctx.beginPath(); sctx.moveTo(58, 206); sctx.lineTo(340, 206); sctx.stroke();
+
+  // Ruled text lines
+  sctx.strokeStyle = '#3A3834';
+  sctx.lineWidth = 3.5;
+  for (let i = 0; i < 4; i++) {
+    const y = 276 + i * 44;
+    sctx.beginPath(); sctx.moveTo(58, y); sctx.lineTo(cw - 70 - ((i * 89) % 150), y); sctx.stroke();
+  }
+
+  // Schematic diagram / table inside tablet
+  sctx.fillStyle = '#EAE6DC';
+  sctx.fillRect(58, 495, cw - 116, 280);
+  sctx.strokeStyle = '#C8C2B5';
+  sctx.lineWidth = 2;
+  sctx.strokeRect(58, 495, cw - 116, 280);
+  if (idx % 2 === 0) {
+    sctx.beginPath();
+    sctx.moveTo(58, 575); sctx.lineTo(cw - 58, 575);
+    sctx.moveTo(58, 675); sctx.lineTo(cw - 58, 675);
+    sctx.moveTo(cw * 0.46, 495); sctx.lineTo(cw * 0.46, 775);
+    sctx.stroke();
+  } else {
+    sctx.strokeStyle = doc.color;
+    sctx.lineWidth = 2.5;
+    sctx.setLineDash([8, 6]);
+    sctx.beginPath(); sctx.arc(cw * 0.42, 635, 84, 0, Math.PI * 2); sctx.stroke();
+    sctx.setLineDash([]);
+    sctx.strokeStyle = '#181715';
+    sctx.beginPath(); sctx.arc(cw * 0.58, 635, 84, 0, Math.PI * 2); sctx.stroke();
+  }
+
+  sctx.fillStyle = '#8C877C';
+  sctx.font = '400 18px "JetBrains Mono", monospace';
+  sctx.fillText(`0${(idx % DOCS.length) + 1}`, cw - 88, ch - 46);
+
+  if (flash > 0.01) {
+    sctx.fillStyle = `rgba(24, 23, 21, ${flash * 0.85})`;
+    sctx.fillRect(0, 0, cw, ch);
+  }
+  scrTex.needsUpdate = true;
+}
+drawRMPage(0, 0);
+
+// ══════════════════════════════════════════════════════════════════════
+// C. 3D DASHED/DOTTED FLIGHT RAILS, ARROWS & SCHEMATIC PACKETS
+// ══════════════════════════════════════════════════════════════════════
+const railCurves = [
+  new THREE.CatmullRomCurve3([
+    new THREE.Vector3(-0.02, 0.24, 0.50),
+    new THREE.Vector3(0.75, 0.72, 0.35),
+    new THREE.Vector3(1.52, 0.42, -0.15),
+    new THREE.Vector3(1.98, 0.14, -0.50)
+  ]),
+  new THREE.CatmullRomCurve3([
+    new THREE.Vector3(-0.02, 0.04, 0.50),
+    new THREE.Vector3(0.78, 0.12, 0.28),
+    new THREE.Vector3(1.54, 0.05, -0.18),
+    new THREE.Vector3(1.98, 0.02, -0.50)
+  ]),
+  new THREE.CatmullRomCurve3([
+    new THREE.Vector3(-0.02, -0.18, 0.50),
+    new THREE.Vector3(0.74, -0.56, 0.25),
+    new THREE.Vector3(1.50, -0.34, -0.20),
+    new THREE.Vector3(1.98, -0.12, -0.50)
+  ])
+];
+
+// Render all 3 schematic dashed/dotted rails + crisp vector arrowheads
+railCurves.forEach((curve, i) => {
+  const pts = curve.getPoints(64);
+  const geo = new THREE.BufferGeometry().setFromPoints(pts);
+  const mat = new THREE.LineDashedMaterial({
+    color: i === 1 ? '#1D4E89' : '#6E6A62',
+    dashSize: i === 1 ? 0.08 : 0.03,
+    gapSize: i === 1 ? 0.05 : 0.06,
+    transparent: true,
+    opacity: i === 1 ? 0.72 : 0.42
+  });
+  const line = new THREE.Line(geo, mat);
+  line.computeLineDistances();
+  worldGroup.add(line);
+
+  // Crisp arrowhead cone at the end of each rail pointing into Paper Pro
+  const endPt = curve.getPoint(0.95);
+  const tan = curve.getTangent(0.95).normalize();
+  const arrow = new THREE.Mesh(
+    new THREE.ConeGeometry(0.032, 0.095, 12),
+    new THREE.MeshBasicMaterial({ color: i === 1 ? '#1D4E89' : '#6E6A62' })
+  );
+  arrow.position.copy(endPt);
+  arrow.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), tan);
+  worldGroup.add(arrow);
+});
+
+// Crisp minimalist drafting packet textures (.MD, HTML, .PDF, .EPUB)
+function makePacketTexture(doc) {
+  const c = document.createElement('canvas');
+  c.width = 320; c.height = 420;
+  const g = c.getContext('2d');
+  g.fillStyle = '#FDFCF8';
+  g.fillRect(0, 0, 320, 420);
+  g.strokeStyle = '#181715';
+  g.lineWidth = 4;
+  g.strokeRect(2, 2, 316, 416);
+
+  // Corner technical tick
+  g.fillStyle = doc.color;
+  g.fillRect(22, 24, 108, 36);
+  g.fillStyle = '#FDFCF8';
+  g.font = '500 22px "JetBrains Mono", monospace';
+  g.fillText(doc.ext, 34, 49);
+
+  g.fillStyle = '#181715';
+  g.font = '400 38px "Instrument Serif", Georgia, serif';
+  g.fillText(doc.title, 24, 114);
+
+  g.strokeStyle = '#9C978C';
+  g.lineWidth = 3;
+  for (let i = 0; i < 6; i++) {
+    g.beginPath();
+    g.moveTo(24, 152 + i * 32);
+    g.lineTo(270 - ((i * 47) % 85), 152 + i * 32);
+    g.stroke();
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+const packetTexs = DOCS.map(makePacketTexture);
+const packetBaseGeo = new THREE.PlaneGeometry(0.68, 0.88, 18, 22);
+const packetBasePos = Float32Array.from(packetBaseGeo.attributes.position.array);
+
+const activePackets = [];
+let docCursor = 0;
+let rmFlashEnd = 0;
+let curRMDoc = 0;
+let bgPulse = 0;
+
+function dispatchPacket(nowSec) {
+  const idx = docCursor % DOCS.length;
+  const curve = railCurves[docCursor % railCurves.length];
+  docCursor++;
+
+  const geo = packetBaseGeo.clone();
+  const mat = new THREE.MeshStandardMaterial({
+    map: packetTexs[idx],
+    roughness: 0.7,
+    metalness: 0.0,
+    transparent: true,
+    opacity: 0,
+    side: THREE.DoubleSide
+  });
+  const mesh = new THREE.Mesh(geo, mat);
+  worldGroup.add(mesh);
+
+  // Wireframe bounding outline traveling with the sheet
+  const wire = new THREE.LineSegments(
+    new THREE.EdgesGeometry(new THREE.PlaneGeometry(0.68, 0.88)),
+    new THREE.LineBasicMaterial({ color: DOCS[idx].color, transparent: true, opacity: 0 })
+  );
+  mesh.add(wire);
+
+  activePackets.push({ idx, curve, mesh, geo, mat, wire, start: nowSec, duration: 1.65, landed: false });
+  bgPulse = 1.0;
+  spawnSchematicPulse();
+}
+
+// ── Interactive Orbit + Click / Hotkey Controls ─────────────────────
+let targetRX = 0.08, targetRY = 0.0;
+let curRX = 0.08, curRY = 0.0;
+let isDragging = false, lastX = 0, lastY = 0, dragX = 0, dragY = 0, downTime = 0;
+
+canvas.addEventListener('pointerdown', (e) => {
+  isDragging = true; lastX = e.clientX; lastY = e.clientY; downTime = performance.now();
+});
+window.addEventListener('pointermove', (e) => {
+  mouseNX = e.clientX / window.innerWidth - 0.5;
+  mouseNY = e.clientY / window.innerHeight - 0.5;
+  if (isDragging) {
+    dragY += (e.clientX - lastX) * 0.0065;
+    dragX += (e.clientY - lastY) * 0.0055;
+    dragX = Math.max(-0.55, Math.min(0.55, dragX));
+    dragY = Math.max(-0.85, Math.min(0.85, dragY));
+    lastX = e.clientX; lastY = e.clientY;
+  } else {
+    targetRY = mouseNX * 0.25;
+    targetRX = 0.08 + mouseNY * 0.16;
+  }
+});
+window.addEventListener('pointerup', () => {
+  if (isDragging) {
+    isDragging = false;
+    if (performance.now() - downTime < 220) dispatchPacket(clock.getElapsedTime());
+  }
+});
+
+document.getElementById('send-btn').addEventListener('click', () => dispatchPacket(clock.getElapsedTime()));
+window.addEventListener('keydown', (e) => {
+  if (e.code === 'Space' || (e.metaKey && e.altKey && e.code === 'KeyR')) {
+    e.preventDefault();
+    dispatchPacket(clock.getElapsedTime());
+  }
+});
+
+function handleResize() {
+  resizeBg();
+  const w = window.innerWidth, h = window.innerHeight;
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  renderer.setSize(w, h);
+  const portrait = h > w;
+  camera.position.z = portrait ? 9.2 : 6.8;
+  quillGroup.position.x = portrait ? -0.45 : -0.78;
+  rmGroup.position.x = portrait ? 1.45 : 2.05;
+}
+handleResize();
+window.addEventListener('resize', handleResize);
+
+// ── Main 60fps Loop ─────────────────────────────────────────────────
+const clock = new THREE.Clock();
+let nextAuto = 0.9;
+
+function animate() {
+  requestAnimationFrame(animate);
+  const t = clock.getElapsedTime();
+  bgPulse *= 0.94;
+
+  // 1. Living 2D technical schematic & fractal canvas
+  drawSchematicBackground(t, bgPulse);
+
+  // 2. Smooth 3D orbit
+  if (!isDragging) { dragX *= 0.94; dragY *= 0.94; }
+  curRX += (targetRX + dragX - curRX) * 0.075;
+  curRY += (targetRY + dragY - curRY) * 0.075;
+  worldGroup.rotation.set(curRX, curRY, 0);
+
+  // 3. Quill Entity technical motion
+  quillGroup.position.y = 0.06 + Math.sin(t * 1.2) * 0.05;
+  quillGroup.rotation.y = 0.22 + Math.sin(t * 0.7) * 0.07 + bgPulse * 0.10;
+  ringA.rotation.z = t * 0.32;
+  ringB.rotation.z = -t * 0.24;
+  cage.rotation.z = Math.sin(t * 0.4) * 0.04;
+
+  // 4. Secondary reMarkable Paper Pro subtle float
+  rmGroup.position.y = -0.02 + Math.sin(t * 1.0 + 1.4) * 0.035;
+
+  // 5. Expanding dashed pulse rings
+  for (let i = pulseCircles.length - 1; i >= 0; i--) {
+    const p = pulseCircles[i];
+    p.age += 0.022;
+    const s = 1 + p.age * 1.9;
+    p.line.scale.set(s, s, 1);
+    p.line.material.opacity = Math.max(0, (1 - p.age) * 0.75);
+    if (p.age >= 1) {
+      quillGroup.remove(p.line);
+      p.line.geometry.dispose();
+      p.line.material.dispose();
+      pulseCircles.splice(i, 1);
+    }
+  }
+
+  // 6. Auto-dispatch schematic packets
+  if (t >= nextAuto) {
+    dispatchPacket(t);
+    nextAuto = t + 3.2;
+  }
+
+  // 7. Update traveling curling schematic packets
+  for (let i = activePackets.length - 1; i >= 0; i--) {
+    const f = activePackets[i];
+    const u = Math.min(1, (t - f.start) / f.duration);
+    const ease = 1 - Math.pow(1 - u, 2.5);
+
+    const pt = f.curve.getPoint(ease);
+    f.mesh.position.copy(pt);
+    f.mesh.rotation.set(
+      (1 - ease) * 0.35 + 0.08 * ease,
+      0.24 * (1 - ease) - 0.46 * ease,
+      Math.sin(ease * Math.PI) * -0.14
+    );
+    const sc = 0.42 + 0.68 * Math.sin(Math.min(1, ease * 1.15) * Math.PI * 0.5);
+    f.mesh.scale.set(sc, sc, 1);
+
+    // Subtle tactile paper curve in flight
+    const air = Math.sin(ease * Math.PI);
+    const pos = f.geo.attributes.position;
+    for (let v = 0; v < pos.count; v++) {
+      const bx = packetBasePos[v * 3];
+      const by = packetBasePos[v * 3 + 1];
+      pos.setZ(v, Math.sin(bx * 3.5 + t * 4.5) * 0.08 * air + Math.cos(by * 2.5 - t * 3.5) * 0.05 * air);
+    }
+    pos.needsUpdate = true;
+    f.geo.computeVertexNormals();
+
+    const op = u < 0.12 ? u / 0.12 : (u > 0.86 ? Math.max(0, (1 - u) / 0.14) : 1);
+    f.mat.opacity = op * 0.96;
+    f.wire.material.opacity = op * 0.7;
+
+    if (u >= 0.87 && !f.landed) {
+      f.landed = true;
+      curRMDoc = f.idx;
+      rmFlashEnd = t + 0.28;
+    }
+    if (u >= 1) {
+      worldGroup.remove(f.mesh);
+      f.geo.dispose(); f.mat.dispose();
+      f.wire.geometry.dispose(); f.wire.material.dispose();
+      activePackets.splice(i, 1);
+    }
+  }
+
+  // 8. Authentic e-ink refresh flicker on arrival
+  if (t < rmFlashEnd) {
+    const rem = (rmFlashEnd - t) / 0.28;
+    drawRMPage(curRMDoc, rem > 0.5 ? 0.85 : 0.2);
+  } else if (rmFlashEnd > 0 && t >= rmFlashEnd) {
+    drawRMPage(curRMDoc, 0);
+    rmFlashEnd = 0;
+  }
+
+  renderer.render(scene, camera);
+}
+
+animate();
+</script>
+</body>
+</html>
