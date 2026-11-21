@@ -243,13 +243,21 @@ function buildStudioEnvironment(renderer) {
   warmWindow.rotation.y = Math.PI / 2.5;
   envScene.add(warmWindow);
 
-  // Dark studio negative fill (gives aluminum real contrast)
+  // Dark studio negative fill (gives aluminum crisp metallic contrast)
   const negFill = new THREE.Mesh(
-    new THREE.PlaneGeometry(14, 10),
-    new THREE.MeshBasicMaterial({ color: new THREE.Color(0.25, 0.24, 0.22), side: THREE.DoubleSide })
+    new THREE.PlaneGeometry(16, 12),
+    new THREE.MeshBasicMaterial({ color: new THREE.Color(0.08, 0.08, 0.09), side: THREE.DoubleSide })
   );
-  negFill.position.set(0, -5, -4);
+  negFill.position.set(0, -4.5, -3.5);
   envScene.add(negFill);
+
+  const sideDark = new THREE.Mesh(
+    new THREE.PlaneGeometry(4, 12),
+    new THREE.MeshBasicMaterial({ color: new THREE.Color(0.12, 0.12, 0.13), side: THREE.DoubleSide })
+  );
+  sideDark.position.set(-5.5, 0, -2);
+  sideDark.rotation.y = Math.PI / 3;
+  envScene.add(sideDark);
 
   const envRT = pmrem.fromScene(envScene, 0.04);
   pmrem.dispose();
@@ -281,25 +289,12 @@ scene.add(rimLight);
 
 // ── Architectural Desk Plane (receives real soft shadow) ────────────
 const deskGeo = new THREE.PlaneGeometry(26, 26);
-const deskMat = new THREE.ShadowMaterial({ opacity: 0.16, color: '#24201A' });
+const deskMat = new THREE.ShadowMaterial({ opacity: 0.22, color: '#1F1B15' });
 const deskShadowPlane = new THREE.Mesh(deskGeo, deskMat);
 deskShadowPlane.rotation.x = -Math.PI / 2;
-deskShadowPlane.position.y = -1.78;
+deskShadowPlane.position.y = -1.62;
 deskShadowPlane.receiveShadow = true;
 scene.add(deskShadowPlane);
-
-// Subtle concentric architectural plinth ring on the floor
-const ringGeo = new THREE.RingGeometry(1.75, 1.765, 96);
-const ringMat = new THREE.MeshBasicMaterial({
-  color: '#CFC8BA',
-  transparent: true,
-  opacity: 0.5,
-  side: THREE.DoubleSide
-});
-const plinthRing = new THREE.Mesh(ringGeo, ringMat);
-plinthRing.rotation.x = -Math.PI / 2;
-plinthRing.position.y = -1.775;
-scene.add(plinthRing);
 
 // ── Procedural Brushed Aluminum & E-Ink Textures ────────────────────
 function makeBrushedMetalMap() {
@@ -333,13 +328,26 @@ function renderEInkPage(pageIndex, strokeProgress = 1, flashAmount = 0) {
   const W = screenCanvas.width;
   const H = screenCanvas.height;
 
-  // Warm Canvas Color e-ink paper base
-  sctx.fillStyle = '#F5F3EC';
+  // Warm Canvas Color e-ink paper base (authentic slightly gray-ivory e-ink tone)
+  sctx.fillStyle = '#ECE9E1';
   sctx.fillRect(0, 0, W, H);
 
-  // Micro paper grain (subtle)
-  sctx.fillStyle = 'rgba(23,22,20,0.018)';
-  for (let i = 0; i < 650; i++) {
+  // Subtle recessed inner-bezel shadow on all 4 edges for physical screen depth
+  const topGrad = sctx.createLinearGradient(0, 0, 0, 26);
+  topGrad.addColorStop(0, 'rgba(23,22,20,0.09)');
+  topGrad.addColorStop(1, 'rgba(23,22,20,0)');
+  sctx.fillStyle = topGrad;
+  sctx.fillRect(0, 0, W, 26);
+
+  const leftGrad = sctx.createLinearGradient(0, 0, 20, 0);
+  leftGrad.addColorStop(0, 'rgba(23,22,20,0.07)');
+  leftGrad.addColorStop(1, 'rgba(23,22,20,0)');
+  sctx.fillStyle = leftGrad;
+  sctx.fillRect(0, 0, 20, H);
+
+  // Micro paper grain (subtle tactile e-ink surface)
+  sctx.fillStyle = 'rgba(23,22,20,0.028)';
+  for (let i = 0; i < 1400; i++) {
     const x = (i * 197) % W;
     const y = (i * 353) % H;
     sctx.fillRect(x, y, 2, 2);
@@ -572,23 +580,23 @@ const R = 0.085;
 
 const metalTex = makeBrushedMetalMap();
 const aluminumMat = new THREE.MeshStandardMaterial({
-  color: '#D9D5CD',
+  color: '#B8B5AE',
   map: metalTex,
-  metalness: 0.78,
-  roughness: 0.28,
-  envMapIntensity: 1.15
+  metalness: 0.90,
+  roughness: 0.21,
+  envMapIntensity: 1.45
 });
 const grooveMat = new THREE.MeshStandardMaterial({
-  color: '#9B968C',
-  metalness: 0.65,
-  roughness: 0.42
+  color: '#7E7A72',
+  metalness: 0.80,
+  roughness: 0.36
 });
 const bezelMat = new THREE.MeshPhysicalMaterial({
-  color: '#E9E6DF',
-  roughness: 0.56,
-  metalness: 0.02,
-  clearcoat: 0.14,
-  clearcoatRoughness: 0.45
+  color: '#E7E4DC',
+  roughness: 0.48,
+  metalness: 0.04,
+  clearcoat: 0.22,
+  clearcoatRoughness: 0.38
 });
 
 // Main extruded aluminum unibody
@@ -718,7 +726,7 @@ nib.rotation.x = Math.PI;
 nib.position.y = -0.85;
 markerGroup.add(nib);
 
-markerGroup.position.set(W / 2 + 0.062, 0.06, 0.004);
+markerGroup.position.set(W / 2 + 0.048, 0.04, 0.002);
 tabletGroup.add(markerGroup);
 
 // ── Real 3D Curling Flying Paper Sheet (Vertex-Deformed Mesh) ───────
@@ -823,7 +831,7 @@ let pageIndex = 0;
 let strokeProgress = 1;
 let flightActive = false;
 let flightStart = 0;
-const FLIGHT_DURATION = 1.45;
+const FLIGHT_DURATION = 1.9;
 let eInkFlashEnd = 0;
 let landedTriggered = false;
 
@@ -976,7 +984,7 @@ function animate() {
     pAttr.needsUpdate = true;
 
     // Magnetic Marker Plus subtle sympathetic hover on touchdown
-    markerGroup.position.x = W / 2 + 0.062 + Math.sin(u * Math.PI) * 0.028;
+    markerGroup.position.x = W / 2 + 0.048 + Math.sin(u * Math.PI) * 0.025;
 
     // Touchdown → authentic e-ink refresh + new page
     if (u >= 0.86 && !landedTriggered) {
@@ -989,7 +997,7 @@ function animate() {
       flightActive = false;
       sheetMat.opacity = 0;
       pMat.opacity = 0;
-      markerGroup.position.x = W / 2 + 0.062;
+      markerGroup.position.x = W / 2 + 0.048;
     }
   }
 
