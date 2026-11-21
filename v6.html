@@ -75,7 +75,7 @@
     z-index: 999;
     opacity: 0;
     transform: translate(-100px, -100px);
-    transition: opacity 0.14s ease, transform 0.06s linear;
+    transition: opacity 0.10s ease;
     filter: drop-shadow(0 4px 8px rgba(24, 23, 21, 0.18));
   }
   #quill-cursor.visible { opacity: 1; }
@@ -1215,11 +1215,9 @@ function updateInteractiveHover(clientX, clientY) {
   if (enteredNewTarget) playSound('hover');
 
   const anyInteractive = nextQuill || nextAgent !== null || nextTablet;
+  quillCursor.style.transform = `translate(${clientX - 18}px, ${clientY - 4}px)`;
   canvas.classList.toggle('hover-quill', anyInteractive);
   quillCursor.classList.toggle('visible', anyInteractive);
-  if (anyInteractive) {
-    quillCursor.style.transform = `translate(${clientX - 18}px, ${clientY - 4}px)`;
-  }
 }
 
 window.addEventListener('pointermove', (e) => {
