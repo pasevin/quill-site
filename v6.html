@@ -600,12 +600,12 @@ rmGroup.add(new THREE.LineLoop(
 ));
 
 // ── Accurate 3D Marker Plus (built from real Elkjøp product photo!) ─
-// Slim ~1:13 cylinder, matte charcoal barrel, smooth gradual taper,
-// fine machined metal conical tip, flat-domed top eraser cap with subtle seam
+// Slim ~1:13 cylinder, satin-charcoal barrel with subtle highlight,
+// crisp metallic collar ring, smooth gradual taper, machined silver-steel tip
 const penGroup = new THREE.Group();
-const penBodyMat = new THREE.MeshStandardMaterial({ color: '#242423', roughness: 0.72, metalness: 0.06 });
-const penSeamMat = new THREE.MeshStandardMaterial({ color: '#454442', roughness: 0.50, metalness: 0.35 });
-const penTipMetal = new THREE.MeshStandardMaterial({ color: '#3E3E3C', roughness: 0.32, metalness: 0.65 });
+const penBodyMat = new THREE.MeshStandardMaterial({ color: '#343331', roughness: 0.48, metalness: 0.16 });
+const penSeamMat = new THREE.MeshStandardMaterial({ color: '#C6C2B8', roughness: 0.28, metalness: 0.82 });
+const penTipMetal = new THREE.MeshStandardMaterial({ color: '#9E9B94', roughness: 0.22, metalness: 0.88 });
 
 const penR = 0.032; // slender authentic diameter
 const barrelLen = 1.24;
@@ -614,38 +614,38 @@ const barrelLen = 1.24;
 const barrel = new THREE.Mesh(new THREE.CylinderGeometry(penR, penR, barrelLen, 28), penBodyMat);
 penGroup.add(barrel);
 
-// 2. Subtle top seam ring + rounded-flat eraser cap
-const seam = new THREE.Mesh(new THREE.CylinderGeometry(penR * 1.01, penR * 1.01, 0.012, 28), penSeamMat);
-seam.position.y = barrelLen / 2 + 0.006;
+// 2. Crisp metallic top collar ring + flat-domed eraser cap
+const seam = new THREE.Mesh(new THREE.CylinderGeometry(penR * 1.02, penR * 1.02, 0.016, 28), penSeamMat);
+seam.position.y = barrelLen / 2 + 0.008;
 penGroup.add(seam);
 
 const eraserBody = new THREE.Mesh(new THREE.CylinderGeometry(penR * 0.99, penR, 0.12, 28), penBodyMat);
-eraserBody.position.y = barrelLen / 2 + 0.072;
+eraserBody.position.y = barrelLen / 2 + 0.076;
 penGroup.add(eraserBody);
 
 const eraserDome = new THREE.Mesh(
   new THREE.SphereGeometry(penR * 0.99, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2),
   penBodyMat
 );
-eraserDome.scale.y = 0.38; // flat-domed authentic Marker Plus top
-eraserDome.position.y = barrelLen / 2 + 0.132;
+eraserDome.scale.y = 0.38;
+eraserDome.position.y = barrelLen / 2 + 0.136;
 penGroup.add(eraserDome);
 
 // 3. Smooth gradual barrel taper (bottom 15%)
-const taperLen = 0.18;
-const taper = new THREE.Mesh(new THREE.CylinderGeometry(penR, penR * 0.42, taperLen, 28), penBodyMat);
+const taperLen = 0.20;
+const taper = new THREE.Mesh(new THREE.CylinderGeometry(penR, penR * 0.40, taperLen, 28), penBodyMat);
 taper.position.y = -barrelLen / 2 - taperLen / 2;
 penGroup.add(taper);
 
-// 4. Long, fine conical machined writing tip
-const tipLen = 0.14;
-const tipCone = new THREE.Mesh(new THREE.ConeGeometry(penR * 0.42, tipLen, 24), penTipMetal);
-tipCone.rotation.x = Math.PI; // point downward!
+// 4. Long, fine conical machined metal writing tip
+const tipLen = 0.18;
+const tipCone = new THREE.Mesh(new THREE.ConeGeometry(penR * 0.40, tipLen, 24), penTipMetal);
+tipCone.rotation.x = Math.PI;
 tipCone.position.y = -barrelLen / 2 - taperLen - tipLen / 2;
 penGroup.add(tipCone);
 
-// Dock Marker Plus flush against right edge, pointing downward (aligned near top-right)
-penGroup.position.set(W / 2 + penR + 0.008, 0.06, 0.002);
+// Dock Marker Plus cleanly alongside right edge with crisp visible separation
+penGroup.position.set(W / 2 + penR + 0.028, 0.06, 0.006);
 rmGroup.add(penGroup);
 
 // ── E-Ink Screen Renderer ───────────────────────────────────────────
@@ -811,7 +811,7 @@ function makePacketTexture(doc) {
   return tex;
 }
 const packetTexs = DOCS.map(makePacketTexture);
-const packetBaseGeo = new THREE.PlaneGeometry(0.68, 0.88, 18, 22);
+const packetBaseGeo = new THREE.PlaneGeometry(0.76, 0.98, 18, 22);
 const packetBasePos = Float32Array.from(packetBaseGeo.attributes.position.array);
 
 const activePackets = [];
@@ -839,12 +839,12 @@ function dispatchPacket(nowSec) {
 
   // Wireframe bounding outline traveling with the sheet
   const wire = new THREE.LineSegments(
-    new THREE.EdgesGeometry(new THREE.PlaneGeometry(0.68, 0.88)),
+    new THREE.EdgesGeometry(new THREE.PlaneGeometry(0.76, 0.98)),
     new THREE.LineBasicMaterial({ color: DOCS[idx].color, transparent: true, opacity: 0 })
   );
   mesh.add(wire);
 
-  activePackets.push({ idx, curve, mesh, geo, mat, wire, start: nowSec, duration: 1.65, landed: false });
+  activePackets.push({ idx, curve, mesh, geo, mat, wire, start: nowSec, duration: 2.15, landed: false });
   bgPulse = 1.0;
   spawnSchematicPulse();
 }
@@ -946,7 +946,7 @@ function animate() {
   // 6. Auto-dispatch schematic packets
   if (t >= nextAuto) {
     dispatchPacket(t);
-    nextAuto = t + 3.2;
+    nextAuto = t + 2.2;
   }
 
   // 7. Update traveling curling schematic packets
