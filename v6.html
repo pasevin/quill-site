@@ -436,7 +436,7 @@ function makeDashedRing(radius, dashSize, gapSize, color, opacity = 0.65) {
 // A. CENTERPIECE HERO — QUILL TECHNICAL ENTITY (foreground left-center)
 // ══════════════════════════════════════════════════════════════════════
 const quillGroup = new THREE.Group();
-quillGroup.position.set(-0.92, 0.06, 1.05);
+quillGroup.position.set(-1.15, 0.08, 0.65);
 worldGroup.add(quillGroup);
 
 // Crisp matte architectural ceramic-ivory squircle slab
@@ -469,7 +469,7 @@ const cage = new THREE.LineSegments(cageGeo, cageMat);
 cage.computeLineDistances();
 quillGroup.add(cage);
 
-// Exact Bootstrap Icons outline feather quill (clean hairline ink, no heavy black fill)
+// Ultra-thin architectural hairline feather quill (technical drafting weight)
 const quillIconCanvas = document.createElement('canvas');
 quillIconCanvas.width = 512; quillIconCanvas.height = 512;
 const qctx = quillIconCanvas.getContext('2d');
@@ -477,16 +477,21 @@ const quillIconTex = new THREE.CanvasTexture(quillIconCanvas);
 quillIconTex.colorSpace = THREE.SRGBColorSpace;
 quillIconTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
 
+const thinQuillSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <path d="M12 52 L50 14" stroke="#181715" stroke-width="1.35" stroke-linecap="round"/>
+  <path d="M19 45 C16.5 34, 21.5 22, 33 14.5 C40 10, 47.5 9.5, 53 11 C50 18.5, 45.5 25, 39.5 30 L34 29 L38.5 33.5 C32.5 39.5, 25.5 43.5, 19 45 Z" stroke="#181715" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M26 38 L22 31 M33 31 L29 23.5 M40 24 L37 17.5" stroke="#181715" stroke-width="0.9" stroke-linecap="round" opacity="0.55"/>
+</svg>`;
 const quillImg = new Image();
 quillImg.onload = () => {
   qctx.clearRect(0, 0, 512, 512);
-  qctx.drawImage(quillImg, 64, 64, 384, 384);
+  qctx.drawImage(quillImg, 44, 44, 424, 424);
   quillIconTex.needsUpdate = true;
 };
-quillImg.src = 'assets/quill-icon.png';
+quillImg.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(thinQuillSvg);
 
 const quillEmblem = new THREE.Mesh(
-  new THREE.PlaneGeometry(1.06, 1.06),
+  new THREE.PlaneGeometry(1.12, 1.12),
   new THREE.MeshBasicMaterial({ map: quillIconTex, transparent: true, depthWrite: false })
 );
 quillEmblem.position.z = 0.095;
@@ -512,11 +517,11 @@ function spawnSchematicPulse() {
 
 // ══════════════════════════════════════════════════════════════════════
 // B. SECONDARY DESTINATION — REAL-REFERENCE reMarkable Paper Pro
-//    Pushed deeper in Z-space for stronger perspective hierarchy.
+//    Pushed deep in Z-space for strong perspective hierarchy.
 // ══════════════════════════════════════════════════════════════════════
 const rmGroup = new THREE.Group();
-rmGroup.position.set(2.65, 0.02, -2.15);
-rmGroup.rotation.set(0.08, -0.44, -0.02);
+rmGroup.position.set(3.35, 0.05, -3.65);
+rmGroup.rotation.set(0.08, -0.42, -0.02);
 worldGroup.add(rmGroup);
 
 const W = 1.62;
@@ -739,26 +744,26 @@ drawRMPage(0, 0);
 
 // ══════════════════════════════════════════════════════════════════════
 // C. 3D DASHED/DOTTED FLIGHT RAILS, ARROWS & SCHEMATIC PACKETS
-//    Sweeping from foreground Quill (z = +1.05) deep into recessed Paper Pro (z = -2.05)
+//    Sweeping from foreground Quill (z = +0.65) deep into recessed Paper Pro (z = -3.55)
 // ══════════════════════════════════════════════════════════════════════
 const railCurves = [
   new THREE.CatmullRomCurve3([
-    new THREE.Vector3(-0.18, 0.24, 1.08),
-    new THREE.Vector3(0.72, 0.68, 0.22),
-    new THREE.Vector3(1.75, 0.38, -1.02),
-    new THREE.Vector3(2.55, 0.14, -2.06)
+    new THREE.Vector3(-0.38, 0.26, 0.68),
+    new THREE.Vector3(0.85, 0.82, -0.65),
+    new THREE.Vector3(2.22, 0.48, -2.25),
+    new THREE.Vector3(3.22, 0.16, -3.55)
   ]),
   new THREE.CatmullRomCurve3([
-    new THREE.Vector3(-0.18, 0.06, 1.08),
-    new THREE.Vector3(0.76, 0.14, 0.12),
-    new THREE.Vector3(1.78, 0.08, -1.06),
-    new THREE.Vector3(2.55, 0.04, -2.06)
+    new THREE.Vector3(-0.38, 0.08, 0.68),
+    new THREE.Vector3(0.90, 0.18, -0.75),
+    new THREE.Vector3(2.26, 0.10, -2.30),
+    new THREE.Vector3(3.22, 0.06, -3.55)
   ]),
   new THREE.CatmullRomCurve3([
-    new THREE.Vector3(-0.18, -0.16, 1.08),
-    new THREE.Vector3(0.70, -0.52, 0.05),
-    new THREE.Vector3(1.72, -0.32, -1.12),
-    new THREE.Vector3(2.55, -0.10, -2.06)
+    new THREE.Vector3(-0.38, -0.14, 0.68),
+    new THREE.Vector3(0.82, -0.58, -0.82),
+    new THREE.Vector3(2.18, -0.34, -2.38),
+    new THREE.Vector3(3.22, -0.08, -3.55)
   ])
 ];
 
@@ -937,11 +942,11 @@ function handleResize() {
   camera.updateProjectionMatrix();
   renderer.setSize(w, h);
   const portrait = h > w;
-  camera.position.z = portrait ? 9.4 : 6.9;
-  quillGroup.position.x = portrait ? -0.52 : -0.92;
-  quillGroup.position.z = portrait ? 0.85 : 1.05;
-  rmGroup.position.x = portrait ? 1.85 : 2.65;
-  rmGroup.position.z = portrait ? -1.85 : -2.15;
+  camera.position.z = portrait ? 11.4 : 8.8;
+  quillGroup.position.x = portrait ? -0.68 : -1.15;
+  quillGroup.position.z = portrait ? 0.45 : 0.65;
+  rmGroup.position.x = portrait ? 2.25 : 3.35;
+  rmGroup.position.z = portrait ? -3.10 : -3.65;
 }
 handleResize();
 window.addEventListener('resize', handleResize);
@@ -969,8 +974,8 @@ function animate() {
   quillScaleCur += (targetScale - quillScaleCur) * 0.18;
   quillZOffsetCur += (targetZOff - quillZOffsetCur) * 0.18;
 
-  const baseZ = window.innerHeight > window.innerWidth ? 0.85 : 1.05;
-  quillGroup.position.y = 0.06 + Math.sin(t * 1.2) * 0.045;
+  const baseZ = window.innerHeight > window.innerWidth ? 0.45 : 0.65;
+  quillGroup.position.y = 0.08 + Math.sin(t * 1.2) * 0.045;
   quillGroup.position.z = baseZ + quillZOffsetCur;
   quillGroup.scale.setScalar(quillScaleCur);
   quillGroup.rotation.y = 0.22 + Math.sin(t * 0.7) * 0.06 + bgPulse * 0.09;
