@@ -224,6 +224,8 @@
   <div class="controls">
     <button class="key-btn" id="send-btn" type="button">⌥⌘R</button>
     <span>·</span>
+    <button class="key-btn" id="sound-btn" type="button" title="Toggle subtle click sounds">sound: on</button>
+    <span>·</span>
     <a href="https://github.com/pasevin">GitHub</a>
   </div>
 </footer>
@@ -505,7 +507,34 @@ function makeSoftShadowTex() {
   tex.colorSpace = THREE.SRGBColorSpace;
   return tex;
 }
-const softShadowTex = makeSoftShadowTex();
+function makeRoundedRectShadowTex(aspect = 1.0, alpha = 0.28, blurPx = 30) {
+  const c = document.createElement('canvas');
+  c.width = 512; c.height = Math.round(512 * aspect);
+  const ctx = c.getContext('2d');
+  const pad = 110;
+  const rw = c.width - pad * 2;
+  const rh = c.height - pad * 2;
+  const r = Math.min(rw, rh) * 0.14;
+  ctx.save();
+  ctx.shadowColor = `rgba(24, 23, 21, ${alpha})`;
+  ctx.shadowBlur = blurPx;
+  ctx.shadowOffsetX = 0;
+  ctx.shadowOffsetY = 0;
+  ctx.fillStyle = `rgba(24, 23, 21, ${alpha * 0.85})`;
+  ctx.beginPath();
+  ctx.roundRect(pad, pad, rw, rh, r);
+  ctx.fill();
+  // Second softer wide ambient pass for realistic penumbra
+  ctx.shadowColor = `rgba(24, 23, 21, ${alpha * 0.55})`;
+  ctx.shadowBlur = blurPx * 2.1;
+  ctx.fill();
+  ctx.restore();
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+const quillShadowTex = makeRoundedRectShadowTex(1.0, 0.26, 26);
+const rmShadowTex = makeRoundedRectShadowTex(1.36, 0.34, 34);
 
 function makeDashedRing(radius, dashSize, gapSize, color, opacity = 0.55) {
   const pts = [];
@@ -548,10 +577,10 @@ quillGroup.add(qSlab);
 
 // Soft ambient drop shadow behind/below Quill squircle
 const quillShadow = new THREE.Mesh(
-  new THREE.PlaneGeometry(1.55, 1.55),
-  new THREE.MeshBasicMaterial({ map: softShadowTex, transparent: true, opacity: 0.78, depthWrite: false })
+  new THREE.PlaneGeometry(1.48, 1.48),
+  new THREE.MeshBasicMaterial({ map: quillShadowTex, transparent: true, opacity: 0.92, depthWrite: false })
 );
-quillShadow.position.set(0.08, -0.14, -0.18);
+quillShadow.position.set(0.11, -0.14, -0.15);
 quillGroup.add(quillShadow);
 
 // Precision CAD wireframe edge outline around the Quill app icon
@@ -617,12 +646,12 @@ rmGroup.scale.setScalar(1.42);
 rmGroup.rotation.set(0.06, -0.36, -0.015);
 worldGroup.add(rmGroup);
 
-// Soft architectural drop shadow behind the Paper Pro chassis
+// Soft architectural drop shadow cast cleanly behind & below the Paper Pro
 const rmShadow = new THREE.Mesh(
-  new THREE.PlaneGeometry(2.65, 3.25),
-  new THREE.MeshBasicMaterial({ map: softShadowTex, transparent: true, opacity: 0.85, depthWrite: false })
+  new THREE.PlaneGeometry(2.68, 3.65),
+  new THREE.MeshBasicMaterial({ map: rmShadowTex, transparent: true, opacity: 0.95, depthWrite: false })
 );
-rmShadow.position.set(0.14, -0.18, -0.22);
+rmShadow.position.set(0.24, -0.26, -0.14);
 rmGroup.add(rmShadow);
 
 const W = 1.62;
@@ -860,13 +889,13 @@ AGENT_SEEDS.forEach((s) => {
   const g = new THREE.Group();
   g.position.set(s.x, s.y, s.z);
 
-  // High-contrast dark faceted charcoal core + rotating wireframe edges parented directly to it
+  // Refined medium-graphite faceted core + rotating ivory wireframe edges
   const core = new THREE.Mesh(
     agentOctaGeo,
     new THREE.MeshStandardMaterial({
-      color: '#222429',
-      roughness: 0.34,
-      metalness: 0.25,
+      color: '#5D626E',
+      roughness: 0.42,
+      metalness: 0.14,
       flatShading: true
     })
   );
@@ -876,10 +905,10 @@ AGENT_SEEDS.forEach((s) => {
 
   // Soft drop shadow behind each agent node
   const nodeShadow = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.38, 0.38),
-    new THREE.MeshBasicMaterial({ map: softShadowTex, transparent: true, opacity: 0.55, depthWrite: false })
+    new THREE.PlaneGeometry(0.36, 0.36),
+    new THREE.MeshBasicMaterial({ map: quillShadowTex, transparent: true, opacity: 0.55, depthWrite: false })
   );
-  nodeShadow.position.set(0.03, -0.05, -0.14);
+  nodeShadow.position.set(0.04, -0.06, -0.14);
   g.add(nodeShadow);
 
   // Crisp outer dotted halo around each agent
@@ -906,9 +935,8 @@ AGENT_SEEDS.forEach((s) => {
 const activePings = [];
 let pingCursor = 0;
 
-function launchAgentPing(nowSec) {
-  const agent = agentNodes[pingCursor % agentNodes.length];
-  pingCursor++;
+function launchAgentPing(nowSec, specificAgent = null) {
+  const agent = specificAgent || agentNodes[pingCursor++ % agentNodes.length];
   agent.pingGlow = 1.0;
 
   const start = agent.group.position.clone();
@@ -1059,31 +1087,124 @@ function dispatchPacket(nowSec) {
   spawnSchematicPulse();
 }
 
-// ── Raycaster Hover & Press on Quill Entity + Subtle Parallax ───────
+// ── Subtle Procedural Web Audio Tactile Clicks ──────────────────────
+let audioCtx = null;
+let soundEnabled = true;
+const soundBtn = document.getElementById('sound-btn');
+soundBtn.addEventListener('click', () => {
+  soundEnabled = !soundEnabled;
+  soundBtn.textContent = soundEnabled ? 'sound: on' : 'sound: off';
+  if (soundEnabled) playSound('tick');
+});
+
+function ensureAudio() {
+  if (!soundEnabled) return null;
+  if (!audioCtx) {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (Ctx) audioCtx = new Ctx();
+  }
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+
+function playSound(kind) {
+  const ctx = ensureAudio();
+  if (!ctx) return;
+  const now = ctx.currentTime;
+
+  if (kind === 'quill') {
+    // Crisp tactile click + warm muted harmonic ping
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(520, now);
+    osc.frequency.exponentialRampToValueAtTime(760, now + 0.055);
+    g.gain.setValueAtTime(0.001, now);
+    g.gain.linearRampToValueAtTime(0.055, now + 0.006);
+    g.gain.exponentialRampToValueAtTime(0.0008, now + 0.11);
+    osc.connect(g).connect(ctx.destination);
+    osc.start(now); osc.stop(now + 0.12);
+  } else if (kind === 'agent') {
+    // Delicate high crystalline pluck
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(784, now);
+    osc.frequency.exponentialRampToValueAtTime(1046, now + 0.06);
+    g.gain.setValueAtTime(0.001, now);
+    g.gain.linearRampToValueAtTime(0.042, now + 0.005);
+    g.gain.exponentialRampToValueAtTime(0.0008, now + 0.095);
+    osc.connect(g).connect(ctx.destination);
+    osc.start(now); osc.stop(now + 0.10);
+  } else if (kind === 'paper') {
+    // Soft low tactile e-ink page refresh thump
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(240, now);
+    osc.frequency.exponentialRampToValueAtTime(125, now + 0.07);
+    g.gain.setValueAtTime(0.001, now);
+    g.gain.linearRampToValueAtTime(0.05, now + 0.004);
+    g.gain.exponentialRampToValueAtTime(0.0008, now + 0.085);
+    osc.connect(g).connect(ctx.destination);
+    osc.start(now); osc.stop(now + 0.09);
+  } else {
+    // Ultra-light UI tick
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(660, now);
+    g.gain.setValueAtTime(0.03, now);
+    g.gain.exponentialRampToValueAtTime(0.0008, now + 0.04);
+    osc.connect(g).connect(ctx.destination);
+    osc.start(now); osc.stop(now + 0.045);
+  }
+}
+
+// ── Raycaster Hover & Press across Quill, AI Agents & Paper Pro ─────
 const raycaster = new THREE.Raycaster();
 const pointerNDC = new THREE.Vector2(-10, -10);
 const quillCursor = document.getElementById('quill-cursor');
 
 let isHoveringQuill = false;
 let isPressingQuill = false;
+let hoveredAgent = null;
+let isHoveringTablet = false;
+let rmRecoil = 0;
 let quillScaleCur = 1.0;
 let quillZOffsetCur = 0.0;
 let targetRX = 0.07, targetRY = 0.0;
 let curRX = 0.07, curRY = 0.0;
 
-function updateQuillHover(clientX, clientY) {
+const agentCoreMeshes = agentNodes.map((a) => a.core);
+const interactiveTargets = [qSlab, quillEmblem, scrMesh, bezelPlate, ...agentCoreMeshes];
+
+function updateInteractiveHover(clientX, clientY) {
   pointerNDC.x = (clientX / window.innerWidth) * 2 - 1;
   pointerNDC.y = -(clientY / window.innerHeight) * 2 + 1;
   raycaster.setFromCamera(pointerNDC, camera);
-  const hits = raycaster.intersectObjects([qSlab, quillEmblem], false);
-  const nowHover = hits.length > 0;
-  if (nowHover !== isHoveringQuill) {
-    isHoveringQuill = nowHover;
-    canvas.classList.toggle('hover-quill', isHoveringQuill);
-    quillCursor.classList.toggle('visible', isHoveringQuill);
+  const hits = raycaster.intersectObjects(interactiveTargets, false);
+
+  let nextQuill = false, nextAgent = null, nextTablet = false;
+  if (hits.length > 0) {
+    const obj = hits[0].object;
+    if (obj === qSlab || obj === quillEmblem) {
+      nextQuill = true;
+    } else if (obj === scrMesh || obj === bezelPlate) {
+      nextTablet = true;
+    } else {
+      nextAgent = agentNodes.find((a) => a.core === obj) || null;
+    }
   }
-  if (isHoveringQuill) {
-    // Anchor fingertip hotspot (17.5, 4 in 40x40 SVG → ~19px, 4px in 44px box)
+
+  isHoveringQuill = nextQuill;
+  hoveredAgent = nextAgent;
+  isHoveringTablet = nextTablet;
+
+  const anyInteractive = nextQuill || nextAgent !== null || nextTablet;
+  canvas.classList.toggle('hover-quill', anyInteractive);
+  quillCursor.classList.toggle('visible', anyInteractive);
+  if (anyInteractive) {
     quillCursor.style.transform = `translate(${clientX - 18}px, ${clientY - 4}px)`;
   }
 }
@@ -1093,36 +1214,65 @@ window.addEventListener('pointermove', (e) => {
   mouseNY = e.clientY / window.innerHeight - 0.5;
   targetRY = mouseNX * 0.20;
   targetRX = 0.07 + mouseNY * 0.12;
-  updateQuillHover(e.clientX, e.clientY);
+  updateInteractiveHover(e.clientX, e.clientY);
 });
 
+let pressKind = null;
+let pressedAgentRef = null;
+
 canvas.addEventListener('pointerdown', (e) => {
-  updateQuillHover(e.clientX, e.clientY);
+  updateInteractiveHover(e.clientX, e.clientY);
   if (isHoveringQuill) {
+    pressKind = 'quill';
     isPressingQuill = true;
+    quillCursor.classList.add('pressed');
+  } else if (hoveredAgent) {
+    pressKind = 'agent';
+    pressedAgentRef = hoveredAgent;
+    quillCursor.classList.add('pressed');
+  } else if (isHoveringTablet) {
+    pressKind = 'tablet';
     quillCursor.classList.add('pressed');
   }
 });
 
 window.addEventListener('pointerup', () => {
-  if (isPressingQuill) {
+  quillCursor.classList.remove('pressed');
+  if (pressKind === 'quill') {
     isPressingQuill = false;
-    quillCursor.classList.remove('pressed');
+    playSound('quill');
     dispatchPacket(clock.getElapsedTime());
+  } else if (pressKind === 'agent' && pressedAgentRef) {
+    playSound('agent');
+    launchAgentPing(clock.getElapsedTime(), pressedAgentRef);
+  } else if (pressKind === 'tablet') {
+    playSound('paper');
+    curRMDoc = (curRMDoc + 1) % DOCS.length;
+    rmFlashEnd = clock.getElapsedTime() + 0.26;
+    rmRecoil = 1.0;
   }
+  pressKind = null;
+  pressedAgentRef = null;
 });
 
 window.addEventListener('pointerleave', () => {
   isHoveringQuill = false;
   isPressingQuill = false;
+  hoveredAgent = null;
+  isHoveringTablet = false;
+  pressKind = null;
   canvas.classList.remove('hover-quill');
   quillCursor.classList.remove('visible', 'pressed');
 });
 
-document.getElementById('send-btn').addEventListener('click', () => dispatchPacket(clock.getElapsedTime()));
+document.getElementById('send-btn').addEventListener('click', () => {
+  playSound('quill');
+  dispatchPacket(clock.getElapsedTime());
+});
 window.addEventListener('keydown', (e) => {
   if (e.code === 'Space' || (e.metaKey && e.altKey && e.code === 'KeyR')) {
     e.preventDefault();
+    playSound('quill');
     dispatchPacket(clock.getElapsedTime());
   }
 });
@@ -1218,17 +1368,26 @@ function animate() {
     tp.setXYZ(1, quillGroup.position.x, quillGroup.position.y, quillGroup.position.z);
     tp.needsUpdate = true;
 
+    const hoverBoost = (a === hoveredAgent) ? 0.22 : 0;
     if (a.pingGlow > 0.01) {
       a.pingGlow *= 0.92;
       a.core.material.color.set('#1D4E89');
       a.wireMat.color.set('#FFFFFF');
-      a.group.scale.setScalar(1 + a.pingGlow * 0.25);
+      a.group.scale.setScalar(1 + a.pingGlow * 0.25 + hoverBoost);
     } else {
-      a.core.material.color.set('#222429');
+      a.core.material.color.set(hoverBoost > 0 ? '#3E4656' : '#5D626E');
       a.wireMat.color.set('#FAF8F2');
-      a.group.scale.setScalar(1);
+      a.group.scale.setScalar(1 + hoverBoost);
     }
   });
+
+  // Subtle Paper Pro recoil when clicked
+  if (rmRecoil > 0.005) {
+    rmRecoil *= 0.88;
+    rmGroup.rotation.y = -0.36 + Math.sin(rmRecoil * Math.PI) * 0.08;
+  } else {
+    rmGroup.rotation.y = -0.36;
+  }
 
   // Periodic swarm pings → when ping arrives at Quill, Quill dispatches to reMarkable!
   if (t >= nextPing) {
