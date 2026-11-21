@@ -1152,39 +1152,29 @@ function animate() {
     const ease = 1 - Math.pow(1 - u, 2.5);
 
     const pt = f.curve.getPoint(ease);
-    // Converge cleanly onto the center of the Paper Pro screen as it lands
-    const landX = rmGroup.position.x;
-    const landY = rmGroup.position.y + 0.04;
-    const landZ = rmGroup.position.z + 0.08;
-    const lock = Math.pow(ease, 2.2);
-    f.mesh.position.set(
-      pt.x + (landX - pt.x) * lock,
-      pt.y + (landY - pt.y) * lock,
-      pt.z + (landZ - pt.z) * lock
-    );
+    f.mesh.position.copy(pt);
     f.mesh.rotation.set(
-      (1 - ease) * 0.28 + rmGroup.rotation.x * ease,
-      0.22 * (1 - ease) + rmGroup.rotation.y * ease,
-      Math.sin(ease * Math.PI) * -0.10 + rmGroup.rotation.z * ease
+      (1 - ease) * 0.35 + 0.08 * ease,
+      0.24 * (1 - ease) - 0.46 * ease,
+      Math.sin(ease * Math.PI) * -0.14
     );
-    // Grow from compact icon-scale (0.55) to nearly full Paper Pro screen coverage (2.95)
-    const sc = 0.55 + 2.40 * Math.pow(ease, 1.15);
+    const sc = 0.42 + 0.68 * Math.sin(Math.min(1, ease * 1.15) * Math.PI * 0.5);
     f.mesh.scale.set(sc, sc, 1);
 
-    // Subtle tactile paper curve in flight, flattening cleanly onto the glass at arrival
-    const air = Math.sin(ease * Math.PI) * (1 - lock * 0.85);
+    // Subtle tactile paper curve in flight
+    const air = Math.sin(ease * Math.PI);
     const pos = f.geo.attributes.position;
     for (let v = 0; v < pos.count; v++) {
       const bx = packetBasePos[v * 3];
       const by = packetBasePos[v * 3 + 1];
-      pos.setZ(v, Math.sin(bx * 3.5 + t * 4.5) * 0.07 * air + Math.cos(by * 2.5 - t * 3.5) * 0.045 * air);
+      pos.setZ(v, Math.sin(bx * 3.5 + t * 4.5) * 0.08 * air + Math.cos(by * 2.5 - t * 3.5) * 0.05 * air);
     }
     pos.needsUpdate = true;
     f.geo.computeVertexNormals();
 
-    const op = u < 0.12 ? u / 0.12 : (u > 0.88 ? Math.max(0, (1 - u) / 0.12) : 1);
+    const op = u < 0.12 ? u / 0.12 : (u > 0.86 ? Math.max(0, (1 - u) / 0.14) : 1);
     f.mat.opacity = op * 0.96;
-    f.wire.material.opacity = op * 0.65;
+    f.wire.material.opacity = op * 0.7;
 
     if (u >= 0.87 && !f.landed) {
       f.landed = true;
