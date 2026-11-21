@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quill</title>
+<meta name="description" content="From your Mac to your reMarkable, in a keystroke.">
+<link rel="icon" type="image/png" href="assets/quill-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+  }
+}
+</script>
+<style>
+  :root {
+    --ink-light: #F3EFE6;
+    --ink-dim: rgba(243, 239, 230, 0.56);
+    --ink-faint: rgba(243, 239, 230, 0.34);
+    --gold: #E8B872;
+    --serif: "Instrument Serif", Georgia, serif;
+    --mono: "JetBrains Mono", ui-monospace, monospace;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #080A10;
+    color: var(--ink-light);
+    -webkit-font-smoothing: antialiased;
+    user-select: none;
+  }
+
+  #webgl {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100dvh;
+    display: block;
+    cursor: grab;
+  }
+  #webgl:active { cursor: grabbing; }
+
+  header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 10;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 28px 40px;
+    pointer-events: none;
+  }
+  .wordmark {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--ink-light);
+    text-decoration: none;
+    pointer-events: auto;
+  }
+  .wordmark svg { width: 17px; height: 17px; color: var(--gold); }
+  .wordmark span {
+    font-family: var(--serif);
+    font-size: 25px;
+    letter-spacing: 0.015em;
+  }
+  .meta-tag {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+  }
+
+  footer {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 0 28px 34px;
+    gap: 14px;
+    pointer-events: none;
+  }
+  h1 {
+    font-family: var(--serif);
+    font-size: clamp(28px, 3.6vw, 44px);
+    font-weight: 400;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+    color: var(--ink-light);
+    text-shadow: 0 4px 28px rgba(4, 6, 12, 0.85);
+  }
+  h1 em {
+    font-style: italic;
+    color: var(--gold);
+  }
+  .controls {
+    display: inline-flex;
+    align-items: center;
+    gap: 16px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-faint);
+    pointer-events: auto;
+  }
+  .key-btn {
+    appearance: none;
+    background: rgba(243, 239, 230, 0.08);
+    border: 1px solid rgba(232, 184, 114, 0.36);
+    border-bottom-width: 2px;
+    border-radius: 6px;
+    padding: 5px 12px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--gold);
+    cursor: pointer;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 0 20px rgba(232, 184, 114, 0.12);
+    transition: transform 0.12s ease, background 0.18s ease, box-shadow 0.18s ease;
+  }
+  .key-btn:hover {
+    background: rgba(232, 184, 114, 0.18);
+    box-shadow: 0 0 26px rgba(232, 184, 114, 0.28);
+  }
+  .key-btn:active { transform: translateY(1px); }
+  .controls a {
+    color: var(--ink-dim);
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+  .controls a:hover { color: var(--ink-light); }
+
+  @media (max-width: 640px) {
+    header { padding: 20px 22px; }
+    footer { padding: 0 20px 24px; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="webgl"></canvas>
+
+<header>
+  <a class="wordmark" href="#">
+    <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+      <path d="M15.807.531c-.174-.177-.41-.289-.64-.363a3.765 3.765 0 0 0-.833-.15c-.62-.049-1.394 0-2.252.175C10.365.545 8.264 1.415 6.315 3.1c-1.95 1.686-3.168 3.724-3.758 5.423-.294.847-.44 1.634-.429 2.268.005.316.05.62.154.88q.025.061.056.122A68 68 0 0 0 .08 15.198a.528.528 0 0 0 .157.72.504.504 0 0 0 .705-.16 67.6 67.6 0 0 1 2.158-3.26c.285.141.616.195.958.182.513-.02 1.098-.188 1.723-.49 1.25-.605 2.744-1.787 4.303-3.642l1.518-1.55a.53.53 0 0 0 0-.739l-.729-.744 1.311.209a.5.5 0 0 0 .443-.15l.663-.684c.663-.68 1.292-1.325 1.763-1.892.314-.378.585-.752.754-1.107.163-.345.278-.773.112-1.188a.5.5 0 0 0-.112-.172"/>
+    </svg>
+    <span>Quill</span>
+  </a>
+  <span class="meta-tag">macOS</span>
+</header>
+
+<footer>
+  <h1>From your Mac to your reMarkable, <em>in a keystroke.</em></h1>
+  <div class="controls">
+    <button class="key-btn" id="send-btn" type="button">⌥⌘R</button>
+    <span>click to send · drag to orbit</span>
+    <span>·</span>
+    <a href="https://github.com/pasevin">GitHub</a>
+  </div>
+</footer>
+
+<script type="module">
+import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+// ── Renderer & Composer (Real Optical Bloom) ────────────────────────
+const canvas = document.getElementById('webgl');
+const renderer = new THREE.WebGLRenderer({
+  canvas,
+  antialias: true,
+  powerPreference: 'high-performance'
+});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.08;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+const scene = new THREE.Scene();
+
+const camera = new THREE.PerspectiveCamera(36, window.innerWidth / window.innerHeight, 0.1, 60);
+camera.position.set(0.1, 0.25, 7.1);
+camera.lookAt(0.15, 0.0, 0);
+
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloomPass = new UnrealBloomPass(
+  new THREE.Vector2(window.innerWidth, window.innerHeight),
+  0.52,  // lush luminous flare without washing out typography
+  0.58,  // soft radius
+  0.72   // threshold: only emissive gold/cobalt/ink flares bloom
+);
+composer.addPass(bloomPass);
+composer.addPass(new OutputPass());
+
+// ── Procedural Nocturnal Studio Environment (PMREM) ─────────────────
+function buildNocturnalEnv(renderer) {
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  const env = new THREE.Scene();
+  env.background = new THREE.Color('#090C14');
+
+  const addPanel = (w, h, color, pos, rot) => {
+    const m = new THREE.Mesh(
+      new THREE.PlaneGeometry(w, h),
+      new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide })
+    );
+    m.position.set(...pos);
+    m.rotation.set(...rot);
+    env.add(m);
+  };
+  // Warm gold overhead key strip
+  addPanel(10, 4, new THREE.Color(3.2, 2.35, 1.4), [-2, 6, 3], [Math.PI / 2.2, 0, 0]);
+  // Electric sapphire-cobalt rim strip
+  addPanel(4, 12, new THREE.Color(1.2, 2.2, 4.2), [-7, 1, 2], [0, Math.PI / 2.2, 0]);
+  // Crisp cool-white highlight on right (catches Paper Pro aluminum)
+  addPanel(4, 12, new THREE.Color(2.4, 2.5, 2.8), [7, 2, 2], [0, -Math.PI / 2.2, 0]);
+
+  const rt = pmrem.fromScene(env, 0.04);
+  pmrem.dispose();
+  return rt.texture;
+}
+scene.environment = buildNocturnalEnv(renderer);
+
+// ── Living GLSL Aurora / Liquid-Ink Background Shader ───────────────
+const bgUniforms = {
+  uTime: { value: 0 },
+  uMouse: { value: new THREE.Vector2(0, 0) },
+  uPulse: { value: 0 }
+};
+
+const bgGeo = new THREE.PlaneGeometry(36, 22);
+const bgMat = new THREE.ShaderMaterial({
+  uniforms: bgUniforms,
+  depthWrite: false,
+  vertexShader: `
+    varying vec2 vUv;
+    void main() {
+      vUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+  fragmentShader: `
+    uniform float uTime;
+    uniform vec2 uMouse;
+    uniform float uPulse;
+    varying vec2 vUv;
+
+    float hash(vec2 p) {
+      return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+    }
+    float noise(vec2 p) {
+      vec2 i = floor(p);
+      vec2 f = fract(p);
+      vec2 u = f * f * (3.0 - 2.0 * f);
+      return mix(
+        mix(hash(i + vec2(0.0, 0.0)), hash(i + vec2(1.0, 0.0)), u.x),
+        mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x),
+        u.y
+      );
+    }
+    float fbm(vec2 p) {
+      float v = 0.0;
+      float a = 0.5;
+      mat2 m = mat2(0.8, 0.6, -0.6, 0.8);
+      for (int i = 0; i < 4; i++) {
+        v += a * noise(p);
+        p = m * p * 2.02;
+        a *= 0.5;
+      }
+      return v;
+    }
+
+    void main() {
+      vec2 uv = vUv;
+      vec2 p = (uv - 0.5) * vec2(1.6, 1.0);
+      p += uMouse * 0.08;
+
+      float t = uTime * 0.14;
+      float q = fbm(p * 1.9 + vec2(t, -t * 0.6));
+      float r = fbm(p * 2.6 + vec2(q * 1.6 - t * 0.5, q * 1.2 + t * 0.4));
+
+      // Deep velvet midnight ink base
+      vec3 col = vec3(0.032, 0.038, 0.062);
+
+      // Luminous sapphire-cobalt nebula current flowing left -> right
+      float cobaltBand = smoothstep(0.28, 0.82, r) * (1.0 - smoothstep(0.15, 0.95, length(p - vec2(-0.18, 0.06))));
+      col += vec3(0.08, 0.21, 0.48) * cobaltBand * (0.78 + uPulse * 0.35);
+
+      // Warm antique-gold halo radiating behind the Quill Entity (center-left)
+      float quillDist = length(p - vec2(-0.22, 0.04));
+      float goldGlow = exp(-quillDist * 3.1) * (0.65 + 0.35 * sin(uTime * 1.3 + q * 3.0));
+      col += vec3(0.52, 0.32, 0.12) * goldGlow * (0.48 + uPulse * 0.42);
+
+      // Soft cool moonlit wash behind the secondary reMarkable on the right
+      float rmDist = length(p - vec2(0.46, -0.02));
+      col += vec3(0.10, 0.14, 0.22) * exp(-rmDist * 3.2) * 0.55;
+
+      // Subtle architectural wave caustics
+      float ribbon = exp(-abs(p.y - 0.08 * sin(p.x * 3.5 - uTime * 0.7) - 0.04) * 14.0);
+      col += vec3(0.22, 0.38, 0.72) * ribbon * 0.14 * (1.0 + uPulse);
+
+      gl_FragColor = vec4(col, 1.0);
+    }
+  `
+});
+const bgPlane = new THREE.Mesh(bgGeo, bgMat);
+bgPlane.position.z = -9;
+scene.add(bgPlane);
+
+// ── Scene Lighting ──────────────────────────────────────────────────
+scene.add(new THREE.HemisphereLight('#C7DAFF', '#1E1A15', 0.55));
+
+const quillPointLight = new THREE.PointLight('#F2B866', 5.5, 10, 1.6);
+quillPointLight.position.set(-0.95, 0.15, 0.9);
+scene.add(quillPointLight);
+
+const cobaltLight = new THREE.PointLight('#3B82F6', 4.0, 11, 1.5);
+cobaltLight.position.set(-2.6, 1.6, 2.2);
+scene.add(cobaltLight);
+
+const rmKeyLight = new THREE.DirectionalLight('#EEF4FF', 1.45);
+rmKeyLight.position.set(2.5, 3.8, 4.5);
+scene.add(rmKeyLight);
+
+// ── World Rig (interactive subtle orbit) ────────────────────────────
+const worldGroup = new THREE.Group();
+scene.add(worldGroup);
+
+// ── Helpers ─────────────────────────────────────────────────────────
+function roundedRectShape(w, h, r) {
+  const s = new THREE.Shape();
+  const x = -w / 2, y = -h / 2;
+  s.moveTo(x + r, y);
+  s.lineTo(x + w - r, y);
+  s.quadraticCurveTo(x + w, y, x + w, y + r);
+  s.lineTo(x + w, y + h - r);
+  s.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  s.lineTo(x + r, y + h);
+  s.quadraticCurveTo(x, y + h, x, y + h - r);
+  s.lineTo(x, y + r);
+  s.quadraticCurveTo(x, y, x + r, y);
+  return s;
+}
+
+function makeSoftDotTexture() {
+  const c = document.createElement('canvas');
+  c.width = 64; c.height = 64;
+  const g = c.getContext('2d');
+  const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  gr.addColorStop(0, 'rgba(255,255,255,1)');
+  gr.addColorStop(0.38, 'rgba(255,255,255,0.65)');
+  gr.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = gr;
+  g.fillRect(0, 0, 64, 64);
+  return new THREE.CanvasTexture(c);
+}
+const dotTex = makeSoftDotTexture();
+
+// ══════════════════════════════════════════════════════════════════════
+// 1. CENTERPIECE HERO — THE QUILL ENTITY (dominant, center-left)
+// ══════════════════════════════════════════════════════════════════════
+const quillEntity = new THREE.Group();
+quillEntity.position.set(-0.92, 0.08, 0.55);
+worldGroup.add(quillEntity);
+
+// Frosted crystalline macOS-app squircle prism
+const prismGeo = new THREE.ExtrudeGeometry(roundedRectShape(1.52, 1.52, 0.34), {
+  depth: 0.24,
+  bevelEnabled: true,
+  bevelThickness: 0.06,
+  bevelSize: 0.055,
+  bevelSegments: 8,
+  curveSegments: 28
+});
+prismGeo.translate(0, 0, -0.12);
+const glassPrismMat = new THREE.MeshPhysicalMaterial({
+  color: '#172033',
+  roughness: 0.12,
+  metalness: 0.15,
+  transmission: 0.68,
+  thickness: 0.75,
+  ior: 1.48,
+  clearcoat: 1.0,
+  clearcoatRoughness: 0.08,
+  envMapIntensity: 1.6
+});
+const prismMesh = new THREE.Mesh(prismGeo, glassPrismMat);
+quillEntity.add(prismMesh);
+
+// Luminous inner edge frame (fine golden-cobalt rim light)
+const rimRingGeo = new THREE.TorusGeometry(1.18, 0.008, 16, 120);
+const goldEmissiveMat = new THREE.MeshStandardMaterial({
+  color: '#F5C982',
+  emissive: '#E8A852',
+  emissiveIntensity: 1.85,
+  metalness: 0.85,
+  roughness: 0.2
+});
+const cobaltEmissiveMat = new THREE.MeshStandardMaterial({
+  color: '#7FB4FF',
+  emissive: '#3B82F6',
+  emissiveIntensity: 1.9,
+  metalness: 0.6,
+  roughness: 0.25
+});
+
+const orbitRing1 = new THREE.Mesh(rimRingGeo, goldEmissiveMat);
+orbitRing1.rotation.set(Math.PI / 3.2, Math.PI / 6, 0);
+quillEntity.add(orbitRing1);
+
+const orbitRing2 = new THREE.Mesh(new THREE.TorusGeometry(1.38, 0.006, 16, 120), cobaltEmissiveMat);
+orbitRing2.rotation.set(-Math.PI / 2.8, -Math.PI / 5, 0.4);
+quillEntity.add(orbitRing2);
+
+// Sculpted 3D Feather Quill emerging proudly from the entity
+const featherGroup = new THREE.Group();
+quillEntity.add(featherGroup);
+
+const vaneShape = new THREE.Shape();
+vaneShape.moveTo(-0.36, -0.44);
+vaneShape.bezierCurveTo(-0.32, -0.05, -0.14, 0.34, 0.42, 0.56);
+vaneShape.bezierCurveTo(0.28, 0.28, 0.18, 0.12, 0.08, 0.06);
+vaneShape.lineTo(0.18, 0.02); // classic quill barb notch
+vaneShape.bezierCurveTo(0.06, -0.16, -0.12, -0.30, -0.36, -0.44);
+
+const featherGeo = new THREE.ExtrudeGeometry(vaneShape, {
+  depth: 0.045,
+  bevelEnabled: true,
+  bevelThickness: 0.018,
+  bevelSize: 0.015,
+  bevelSegments: 5,
+  curveSegments: 24
+});
+featherGeo.translate(0, 0, -0.0225);
+
+const featherMat = new THREE.MeshStandardMaterial({
+  color: '#F6DFB5',
+  emissive: '#D89640',
+  emissiveIntensity: 0.72,
+  metalness: 0.92,
+  roughness: 0.16,
+  envMapIntensity: 1.8
+});
+const featherMesh = new THREE.Mesh(featherGeo, featherMat);
+featherMesh.position.set(0.04, 0.04, 0.18);
+featherGroup.add(featherMesh);
+
+// Glowing golden spine / nib shaft
+const nibCurve = new THREE.CatmullRomCurve3([
+  new THREE.Vector3(-0.46, -0.54, 0.20),
+  new THREE.Vector3(-0.12, -0.12, 0.21),
+  new THREE.Vector3(0.40, 0.54, 0.20)
+]);
+const nibSpine = new THREE.Mesh(
+  new THREE.TubeGeometry(nibCurve, 32, 0.014, 12, false),
+  goldEmissiveMat
+);
+featherGroup.add(nibSpine);
+
+// Glowing energy core inside the glass squircle
+const coreGlow = new THREE.Mesh(
+  new THREE.SphereGeometry(0.26, 24, 24),
+  new THREE.MeshBasicMaterial({ color: '#F3C070', transparent: true, opacity: 0.42 })
+);
+coreGlow.position.set(0, 0, -0.02);
+quillEntity.add(coreGlow);
+
+// Expanding shockwave pulse rings emitted on every dispatch
+const pulseRings = [];
+function spawnPulseRing() {
+  const m = new THREE.Mesh(
+    new THREE.RingGeometry(0.72, 0.76, 64),
+    new THREE.MeshBasicMaterial({
+      color: '#F5C982',
+      transparent: true,
+      opacity: 0.85,
+      side: THREE.DoubleSide
+    })
+  );
+  m.position.set(0, 0, 0.16);
+  quillEntity.add(m);
+  pulseRings.push({ mesh: m, age: 0 });
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// 2. SECONDARY DESTINATION — 3D reMarkable Paper Pro (right, recessed)
+// ══════════════════════════════════════════════════════════════════════
+const rmGroup = new THREE.Group();
+rmGroup.position.set(2.15, -0.06, -0.85);
+rmGroup.rotation.set(0.10, -0.52, -0.03);
+worldGroup.add(rmGroup);
+
+const W = 1.62;
+const H = 2.26;
+const D = 0.048;
+const R = 0.072;
+
+const rmAluminum = new THREE.MeshStandardMaterial({
+  color: '#B6B3AC',
+  metalness: 0.88,
+  roughness: 0.24,
+  envMapIntensity: 1.35
+});
+const rmBezel = new THREE.MeshPhysicalMaterial({
+  color: '#E5E1D8',
+  roughness: 0.48,
+  metalness: 0.04,
+  clearcoat: 0.2
+});
+
+const rmBodyGeo = new THREE.ExtrudeGeometry(roundedRectShape(W, H, R), {
+  depth: D,
+  bevelEnabled: true,
+  bevelThickness: 0.007,
+  bevelSize: 0.007,
+  bevelSegments: 4,
+  curveSegments: 20
+});
+rmBodyGeo.translate(0, 0, -D / 2);
+rmGroup.add(new THREE.Mesh(rmBodyGeo, rmAluminum));
+
+// Corrugated dual grooves
+[-0.009, 0.009].forEach((zOff) => {
+  const gg = new THREE.ExtrudeGeometry(roundedRectShape(W + 0.01, H + 0.01, R + 0.003), {
+    depth: 0.004, bevelEnabled: false, curveSegments: 16
+  });
+  gg.translate(0, 0, zOff - 0.002);
+  rmGroup.add(new THREE.Mesh(gg, new THREE.MeshStandardMaterial({ color: '#6E6B64', metalness: 0.8, roughness: 0.4 })));
+});
+
+const rmBezelMesh = new THREE.Mesh(
+  new THREE.ShapeGeometry(roundedRectShape(W - 0.02, H - 0.02, R - 0.01), 16),
+  rmBezel
+);
+rmBezelMesh.position.z = D / 2 + 0.0075;
+rmGroup.add(rmBezelMesh);
+
+// Live E-Ink Display Canvas
+const scrCanvas = document.createElement('canvas');
+scrCanvas.width = 768; scrCanvas.height = 1024;
+const sctx = scrCanvas.getContext('2d');
+const scrTex = new THREE.CanvasTexture(scrCanvas);
+scrTex.colorSpace = THREE.SRGBColorSpace;
+
+const scrW = W - 0.145;
+const scrH = H - 0.30;
+const scrY = 0.062;
+const rmScreenMat = new THREE.MeshStandardMaterial({
+  map: scrTex,
+  roughness: 0.65,
+  metalness: 0.0,
+  emissive: '#EDE9DF',
+  emissiveMap: scrTex,
+  emissiveIntensity: 0.24 // soft reading-light Paper Pro frontlight!
+});
+const rmScreen = new THREE.Mesh(new THREE.PlaneGeometry(scrW, scrH), rmScreenMat);
+rmScreen.position.set(0, scrY, D / 2 + 0.0085);
+rmGroup.add(rmScreen);
+
+// Magnetic Marker Plus on right edge
+const markerPts = [
+  new THREE.Vector2(0.001, -0.68),
+  new THREE.Vector2(0.010, -0.66),
+  new THREE.Vector2(0.036, -0.54),
+  new THREE.Vector2(0.037,  0.56),
+  new THREE.Vector2(0.034,  0.58),
+];
+const marker = new THREE.Mesh(
+  new THREE.LatheGeometry(markerPts, 24),
+  new THREE.MeshStandardMaterial({ color: '#222220', roughness: 0.62, metalness: 0.12 })
+);
+marker.position.set(W / 2 + 0.042, 0.03, 0.002);
+rmGroup.add(marker);
+
+// Luminous landing halo on the Paper Pro screen
+const landingGlow = new THREE.Mesh(
+  new THREE.PlaneGeometry(scrW * 1.06, scrH * 1.06),
+  new THREE.MeshBasicMaterial({ color: '#7FB4FF', transparent: true, opacity: 0, depthWrite: false })
+);
+landingGlow.position.set(0, scrY, D / 2 + 0.012);
+rmGroup.add(landingGlow);
+
+// Draw received page on Paper Pro screen
+const DOC_TYPES = [
+  { tag: '.MD',   title: 'Architecture',    color: '#2B6BE6', accent: '#60A5FA' },
+  { tag: 'URL',   title: 'On Quiet Tools',  color: '#D97706', accent: '#F5C982' },
+  { tag: '.PDF',  title: 'Spatial Paper',   color: '#C84B31', accent: '#F08C72' },
+  { tag: '.EPUB', title: 'Field Notes',     color: '#1F7A5A', accent: '#6EE7B7' }
+];
+
+function drawRMPage(idx, flash = 0) {
+  const doc = DOC_TYPES[idx % DOC_TYPES.length];
+  const cw = scrCanvas.width, ch = scrCanvas.height;
+  sctx.fillStyle = '#ECE8DF';
+  sctx.fillRect(0, 0, cw, ch);
+
+  sctx.fillStyle = '#78736A';
+  sctx.font = '400 20px "JetBrains Mono", monospace';
+  sctx.fillText(doc.tag, 60, 72);
+  sctx.strokeStyle = '#D5CFC3';
+  sctx.lineWidth = 2;
+  sctx.beginPath(); sctx.moveTo(60, 94); sctx.lineTo(cw - 60, 94); sctx.stroke();
+
+  sctx.fillStyle = '#171614';
+  sctx.font = '400 68px "Instrument Serif", Georgia, serif';
+  sctx.fillText(doc.title, 60, 186);
+
+  // Colored Paper Pro Canvas highlight
+  sctx.strokeStyle = doc.color;
+  sctx.lineWidth = 5;
+  sctx.lineCap = 'round';
+  sctx.beginPath();
+  sctx.moveTo(60, 206);
+  sctx.quadraticCurveTo(210, 198, 360, 208);
+  sctx.stroke();
+
+  // Clean abstract editorial content
+  sctx.strokeStyle = '#33312D';
+  sctx.lineWidth = 4;
+  for (let i = 0; i < 5; i++) {
+    const y = 278 + i * 44;
+    sctx.beginPath();
+    sctx.moveTo(60, y);
+    sctx.lineTo(cw - 80 - ((i * 97) % 160), y);
+    sctx.stroke();
+  }
+
+  // Visual figure / table block
+  sctx.fillStyle = '#E2DDD2';
+  sctx.fillRect(60, 520, cw - 120, 240);
+  sctx.strokeStyle = '#C8C1B4';
+  sctx.lineWidth = 2;
+  sctx.strokeRect(60, 520, cw - 120, 240);
+  if (idx % 2 === 0) {
+    sctx.beginPath();
+    sctx.moveTo(60, 595); sctx.lineTo(cw - 60, 595);
+    sctx.moveTo(60, 675); sctx.lineTo(cw - 60, 675);
+    sctx.moveTo(cw * 0.48, 520); sctx.lineTo(cw * 0.48, 760);
+    sctx.stroke();
+  } else {
+    sctx.strokeStyle = doc.color;
+    sctx.lineWidth = 3;
+    sctx.beginPath();
+    sctx.arc(cw * 0.42, 640, 74, 0, Math.PI * 2);
+    sctx.stroke();
+    sctx.strokeStyle = '#171614';
+    sctx.beginPath();
+    sctx.arc(cw * 0.58, 640, 74, 0, Math.PI * 2);
+    sctx.stroke();
+  }
+
+  if (flash > 0.01) {
+    sctx.fillStyle = `rgba(18, 18, 16, ${flash * 0.85})`;
+    sctx.fillRect(0, 0, cw, ch);
+  }
+  scrTex.needsUpdate = true;
+}
+drawRMPage(0, 0);
+
+// ══════════════════════════════════════════════════════════════════════
+// 3. MULTI-SHEET LUMINOUS DISPATCH SYSTEM (Quill → reMarkable)
+// ══════════════════════════════════════════════════════════════════════
+const sheetGeoTemplate = new THREE.PlaneGeometry(0.95, 1.24, 22, 28);
+const sheetBasePos = Float32Array.from(sheetGeoTemplate.attributes.position.array);
+
+function makeFlyingSheetTexture(doc) {
+  const c = document.createElement('canvas');
+  c.width = 384; c.height = 512;
+  const g = c.getContext('2d');
+  g.fillStyle = '#FAF7F0';
+  g.fillRect(0, 0, 384, 512);
+  // Crisp glowing top edge + badge
+  g.fillStyle = doc.color;
+  g.fillRect(0, 0, 384, 10);
+  g.font = '600 28px "JetBrains Mono", monospace';
+  g.fillText(doc.tag, 36, 72);
+  g.fillStyle = '#171614';
+  g.font = '400 46px "Instrument Serif", Georgia, serif';
+  g.fillText(doc.title, 36, 136);
+  g.fillStyle = 'rgba(23,22,20,0.22)';
+  for (let i = 0; i < 7; i++) {
+    g.fillRect(36, 180 + i * 36, 260 + ((i * 53) % 60) - 30, 5);
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+const sheetTextures = DOC_TYPES.map(makeFlyingSheetTexture);
+
+const activeFlights = [];
+let nextDocIndex = 0;
+let rmFlashEnd = 0;
+let currentRMDoc = 0;
+let landingGlowStrength = 0;
+
+function launchDocument(nowSec) {
+  const idx = nextDocIndex % DOC_TYPES.length;
+  nextDocIndex++;
+  const doc = DOC_TYPES[idx];
+
+  // Sweep from Quill Entity core → high graceful arc → Paper Pro screen
+  const arcY = 0.65 + (Math.random() - 0.5) * 0.45;
+  const arcZ = 1.05 + Math.random() * 0.35;
+  const curve = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(-0.78, 0.12, 0.72),
+    new THREE.Vector3(0.08, arcY, arcZ),
+    new THREE.Vector3(1.22, arcY * 0.55, 0.28),
+    new THREE.Vector3(2.12, 0.0, -0.78)
+  ]);
+
+  const geo = sheetGeoTemplate.clone();
+  const mat = new THREE.MeshStandardMaterial({
+    map: sheetTextures[idx],
+    emissive: new THREE.Color(doc.accent),
+    emissiveIntensity: 0.42,
+    roughness: 0.45,
+    metalness: 0.05,
+    transparent: true,
+    opacity: 0,
+    side: THREE.DoubleSide
+  });
+  const mesh = new THREE.Mesh(geo, mat);
+  worldGroup.add(mesh);
+
+  // Comet-tail luminous particle ribbon for this sheet
+  const count = 42;
+  const pos = new Float32Array(count * 3);
+  const seeds = Array.from({ length: count }, () => ({
+    lag: Math.random() * 0.24,
+    spread: 0.06 + Math.random() * 0.14,
+    phase: Math.random() * Math.PI * 2
+  }));
+  const pGeo = new THREE.BufferGeometry();
+  pGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const pMat = new THREE.PointsMaterial({
+    size: 0.09,
+    map: dotTex,
+    color: new THREE.Color(doc.accent),
+    transparent: true,
+    opacity: 0,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false
+  });
+  const points = new THREE.Points(pGeo, pMat);
+  worldGroup.add(points);
+
+  activeFlights.push({
+    idx, doc, curve, mesh, geo, mat, points, pGeo, pMat, seeds,
+    start: nowSec,
+    duration: 1.75,
+    landed: false
+  });
+
+  // Trigger Quill Entity magical pulse + recoil
+  bgUniforms.uPulse.value = 1.0;
+  spawnPulseRing();
+}
+
+// ── Ambient Floating Cosmic Ink Motes in 3D Space ───────────────────
+const DUST = 140;
+const dustPos = new Float32Array(DUST * 3);
+const dustCol = new Float32Array(DUST * 3);
+const cGold = new THREE.Color('#F5C982');
+const cBlue = new THREE.Color('#60A5FA');
+for (let i = 0; i < DUST; i++) {
+  dustPos[i * 3]     = (Math.random() - 0.5) * 12;
+  dustPos[i * 3 + 1] = (Math.random() - 0.5) * 7;
+  dustPos[i * 3 + 2] = (Math.random() - 0.5) * 6 - 1;
+  const c = Math.random() > 0.45 ? cGold : cBlue;
+  dustCol[i * 3] = c.r; dustCol[i * 3 + 1] = c.g; dustCol[i * 3 + 2] = c.b;
+}
+const dustGeo = new THREE.BufferGeometry();
+dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPos, 3));
+dustGeo.setAttribute('color', new THREE.BufferAttribute(dustCol, 3));
+const dustPoints = new THREE.Points(dustGeo, new THREE.PointsMaterial({
+  size: 0.055,
+  map: dotTex,
+  vertexColors: true,
+  transparent: true,
+  opacity: 0.52,
+  blending: THREE.AdditiveBlending,
+  depthWrite: false
+}));
+worldGroup.add(dustPoints);
+
+// ── Interactive Orbit + Click / Hotkey Controls ─────────────────────
+let targetRX = 0.06, targetRY = 0.0;
+let curRX = 0.06, curRY = 0.0;
+let isDragging = false, lastX = 0, lastY = 0;
+let dragX = 0, dragY = 0, downTime = 0;
+
+canvas.addEventListener('pointerdown', (e) => {
+  isDragging = true;
+  lastX = e.clientX; lastY = e.clientY;
+  downTime = performance.now();
+});
+window.addEventListener('pointermove', (e) => {
+  const nx = e.clientX / window.innerWidth - 0.5;
+  const ny = e.clientY / window.innerHeight - 0.5;
+  bgUniforms.uMouse.value.set(nx, -ny);
+  if (isDragging) {
+    dragY += (e.clientX - lastX) * 0.0065;
+    dragX += (e.clientY - lastY) * 0.0055;
+    dragX = Math.max(-0.55, Math.min(0.55, dragX));
+    dragY = Math.max(-0.85, Math.min(0.85, dragY));
+    lastX = e.clientX; lastY = e.clientY;
+  } else {
+    targetRY = nx * 0.28;
+    targetRX = 0.06 + ny * 0.18;
+  }
+});
+window.addEventListener('pointerup', () => {
+  if (isDragging) {
+    isDragging = false;
+    if (performance.now() - downTime < 220) {
+      launchDocument(clock.getElapsedTime());
+    }
+  }
+});
+
+document.getElementById('send-btn').addEventListener('click', () => {
+  launchDocument(clock.getElapsedTime());
+});
+window.addEventListener('keydown', (e) => {
+  if (e.code === 'Space' || (e.metaKey && e.altKey && e.code === 'KeyR')) {
+    e.preventDefault();
+    launchDocument(clock.getElapsedTime());
+  }
+});
+
+function handleResize() {
+  const w = window.innerWidth, h = window.innerHeight;
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  renderer.setSize(w, h);
+  composer.setSize(w, h);
+  const portrait = h > w;
+  camera.position.z = portrait ? 9.4 : 7.0;
+  quillEntity.position.x = portrait ? -0.55 : -0.92;
+  rmGroup.position.x = portrait ? 1.45 : 2.15;
+}
+handleResize();
+window.addEventListener('resize', handleResize);
+
+// ── Main 60fps Experience Loop ──────────────────────────────────────
+const clock = new THREE.Clock();
+let nextAutoLaunch = 1.1;
+
+function animate() {
+  requestAnimationFrame(animate);
+  const t = clock.getElapsedTime();
+  bgUniforms.uTime.value = t;
+  bgUniforms.uPulse.value *= 0.94;
+
+  // Smooth spring camera/world orbit
+  if (!isDragging) { dragX *= 0.94; dragY *= 0.94; }
+  curRX += (targetRX + dragX - curRX) * 0.07;
+  curRY += (targetRY + dragY - curRY) * 0.07;
+  worldGroup.rotation.set(curRX, curRY, 0);
+
+  // Quill Entity alive breathing, orbital rings, and golden core
+  quillEntity.position.y = 0.08 + Math.sin(t * 1.35) * 0.08;
+  quillEntity.rotation.y = 0.28 + Math.sin(t * 0.8) * 0.08 + bgUniforms.uPulse.value * 0.16;
+  quillEntity.rotation.x = Math.cos(t * 0.9) * 0.05;
+  orbitRing1.rotation.z = t * 0.45;
+  orbitRing2.rotation.z = -t * 0.34;
+  featherGroup.position.y = Math.sin(t * 2.1) * 0.03;
+  coreGlow.scale.setScalar(1 + Math.sin(t * 2.6) * 0.09 + bgUniforms.uPulse.value * 0.42);
+  quillPointLight.intensity = 5.2 + bgUniforms.uPulse.value * 4.5;
+
+  // Secondary Paper Pro gentle hover
+  rmGroup.position.y = -0.06 + Math.sin(t * 1.1 + 1.2) * 0.045;
+
+  // Ambient dust drift
+  dustPoints.rotation.y = t * 0.025;
+  dustPoints.position.y = Math.sin(t * 0.4) * 0.12;
+
+  // Expanding shockwave pulse rings
+  for (let i = pulseRings.length - 1; i >= 0; i--) {
+    const pr = pulseRings[i];
+    pr.age += 0.024;
+    const s = 1 + pr.age * 2.4;
+    pr.mesh.scale.set(s, s, 1);
+    pr.mesh.material.opacity = Math.max(0, (1 - pr.age) * 0.8);
+    if (pr.age >= 1) {
+      quillEntity.remove(pr.mesh);
+      pr.mesh.geometry.dispose();
+      pr.mesh.material.dispose();
+      pulseRings.splice(i, 1);
+    }
+  }
+
+  // Periodic automatic magic dispatch
+  if (t >= nextAutoLaunch) {
+    launchDocument(t);
+    nextAutoLaunch = t + 3.8;
+  }
+
+  // Update all in-flight curling 3D documents
+  for (let i = activeFlights.length - 1; i >= 0; i--) {
+    const f = activeFlights[i];
+    const u = Math.min(1, (t - f.start) / f.duration);
+    const ease = 1 - Math.pow(1 - u, 2.6);
+
+    const pt = f.curve.getPoint(ease);
+    f.mesh.position.copy(pt);
+    f.mesh.rotation.set(
+      (1 - ease) * 0.45 + 0.10 * ease,
+      0.35 * (1 - ease) - 0.52 * ease,
+      Math.sin(ease * Math.PI) * -0.22
+    );
+    const sc = 0.32 + 0.88 * Math.sin(Math.min(1, ease * 1.15) * Math.PI * 0.5);
+    f.mesh.scale.set(sc, sc, 1);
+
+    // Real-time 3D vertex curl & flutter
+    const air = Math.sin(ease * Math.PI);
+    const pos = f.geo.attributes.position;
+    for (let v = 0; v < pos.count; v++) {
+      const bx = sheetBasePos[v * 3];
+      const by = sheetBasePos[v * 3 + 1];
+      const curl = Math.sin(bx * 3.2 + t * 5.2) * 0.12 * air
+                 + Math.cos(by * 2.4 - t * 4.4) * 0.09 * air
+                 - (bx * bx * 0.25) * air;
+      pos.setZ(v, curl);
+    }
+    pos.needsUpdate = true;
+    f.geo.computeVertexNormals();
+
+    if (u < 0.14) f.mat.opacity = (u / 0.14) * 0.96;
+    else if (u > 0.86) f.mat.opacity = Math.max(0, (1 - u) / 0.14) * 0.96;
+    else f.mat.opacity = 0.96;
+
+    // Comet-tail particles trailing the flying document
+    f.pMat.opacity = Math.sin(u * Math.PI) * 0.9;
+    const pAttr = f.pGeo.attributes.position;
+    for (let p = 0; p < f.seeds.length; p++) {
+      const s = f.seeds[p];
+      const pu = Math.max(0, Math.min(1, ease - s.lag));
+      const bp = f.curve.getPoint(pu);
+      pAttr.setXYZ(
+        p,
+        bp.x + Math.sin(t * 3.4 + s.phase) * s.spread * (1 - pu * 0.5),
+        bp.y + Math.cos(t * 2.9 + s.phase) * s.spread * (1 - pu * 0.5),
+        bp.z + Math.sin(t * 2.5 + s.phase * 2) * s.spread * 0.6
+      );
+    }
+    pAttr.needsUpdate = true;
+
+    // Touchdown on reMarkable Paper Pro → e-ink flash + bloom ripple
+    if (u >= 0.87 && !f.landed) {
+      f.landed = true;
+      currentRMDoc = f.idx;
+      rmFlashEnd = t + 0.30;
+      landingGlow.material.color.set(f.doc.accent);
+      landingGlowStrength = 0.55;
+    }
+
+    if (u >= 1) {
+      worldGroup.remove(f.mesh);
+      worldGroup.remove(f.points);
+      f.geo.dispose(); f.mat.dispose();
+      f.pGeo.dispose(); f.pMat.dispose();
+      activeFlights.splice(i, 1);
+    }
+  }
+
+  // Paper Pro e-ink refresh flicker & landing glow decay
+  if (t < rmFlashEnd) {
+    const rem = (rmFlashEnd - t) / 0.30;
+    drawRMPage(currentRMDoc, rem > 0.5 ? 0.85 : 0.22);
+  } else if (landingGlowStrength > 0.01) {
+    drawRMPage(currentRMDoc, 0);
+  }
+  if (landingGlowStrength > 0.002) {
+    landingGlowStrength *= 0.90;
+    landingGlow.material.opacity = landingGlowStrength;
+  } else {
+    landingGlow.material.opacity = 0;
+  }
+
+  composer.render();
+}
+
+animate();
+</script>
+</body>
+</html>
