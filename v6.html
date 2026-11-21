@@ -60,9 +60,27 @@
     height: 100dvh;
     display: block;
     z-index: 2;
-    cursor: grab;
+    cursor: default;
   }
-  #webgl:active { cursor: grabbing; }
+  #webgl.hover-quill { cursor: none; }
+
+  /* Custom oversized technical finger pointer (shown when hovering the Quill entity) */
+  #quill-cursor {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 44px;
+    height: 44px;
+    pointer-events: none;
+    z-index: 999;
+    opacity: 0;
+    transform: translate(-100px, -100px);
+    transition: opacity 0.14s ease, transform 0.06s linear;
+    filter: drop-shadow(0 4px 8px rgba(24, 23, 21, 0.18));
+  }
+  #quill-cursor.visible { opacity: 1; }
+  #quill-cursor.pressed svg { transform: scale(0.88) translateY(2px); }
+  #quill-cursor svg { width: 100%; height: 100%; transition: transform 0.1s ease; }
 
   /* Minimal Drafting Frame Corners */
   .frame-marks {
@@ -182,6 +200,14 @@
 <canvas id="schematic-bg" aria-hidden="true"></canvas>
 <canvas id="webgl"></canvas>
 <div class="frame-marks" aria-hidden="true"></div>
+<div id="quill-cursor" aria-hidden="true">
+  <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M14.5 5.5C14.5 3.84 15.84 2.5 17.5 2.5C19.16 2.5 20.5 3.84 20.5 5.5V16.2C21.15 15.75 21.95 15.5 22.8 15.5C24.2 15.5 25.4 16.35 25.95 17.55C26.55 17.2 27.25 17 28 17C29.45 17 30.7 17.9 31.2 19.2C31.7 19.05 32.25 19 32.8 19C34.85 19 36.5 20.65 36.5 22.7V27.2C36.5 32.9 31.9 37.5 26.2 37.5H20.8C16.7 37.5 13.1 35.1 11.4 31.3L7.2 22.2C6.5 20.7 7.15 18.9 8.65 18.2C10.15 17.5 11.95 18.15 12.65 19.65L14.5 23.4V5.5Z" fill="#FDFCF8" stroke="#181715" stroke-width="2.1" stroke-linejoin="round"/>
+    <line x1="20.5" y1="16" x2="20.5" y2="23.5" stroke="#181715" stroke-width="1.6" stroke-linecap="round"/>
+    <line x1="26" y1="17.5" x2="26" y2="24" stroke="#181715" stroke-width="1.6" stroke-linecap="round"/>
+    <line x1="31.2" y1="19.2" x2="31.2" y2="24.5" stroke="#181715" stroke-width="1.6" stroke-linecap="round"/>
+  </svg>
+</div>
 
 <header>
   <a class="wordmark" href="#">
@@ -197,7 +223,6 @@
   <h1>A macOS menu-bar utility that sends <strong>Markdown, web articles, PDFs, and EPUBs</strong> directly to your reMarkable.</h1>
   <div class="controls">
     <button class="key-btn" id="send-btn" type="button">⌥⌘R · dispatch</button>
-    <span>drag to inspect</span>
     <span>·</span>
     <a href="https://github.com/pasevin">GitHub</a>
   </div>
@@ -408,10 +433,10 @@ function makeDashedRing(radius, dashSize, gapSize, color, opacity = 0.65) {
 }
 
 // ══════════════════════════════════════════════════════════════════════
-// A. CENTERPIECE HERO — QUILL TECHNICAL ENTITY (center-left)
+// A. CENTERPIECE HERO — QUILL TECHNICAL ENTITY (foreground left-center)
 // ══════════════════════════════════════════════════════════════════════
 const quillGroup = new THREE.Group();
-quillGroup.position.set(-0.78, 0.06, 0.45);
+quillGroup.position.set(-0.92, 0.06, 1.05);
 worldGroup.add(quillGroup);
 
 // Crisp matte architectural ceramic-ivory squircle slab
@@ -426,67 +451,53 @@ const qSlabGeo = new THREE.ExtrudeGeometry(roundedRectShape(1.42, 1.42, 0.30), {
 qSlabGeo.translate(0, 0, -0.07);
 const qSlabMat = new THREE.MeshStandardMaterial({
   color: '#FAF8F2',
-  roughness: 0.58,
+  roughness: 0.56,
   metalness: 0.04
 });
 const qSlab = new THREE.Mesh(qSlabGeo, qSlabMat);
 quillGroup.add(qSlab);
 
 // Precision CAD wireframe edge outline around the Quill slab
-const qEdges = new THREE.LineSegments(
-  new THREE.EdgesGeometry(qSlabGeo, 26),
-  new THREE.LineBasicMaterial({ color: '#181715', transparent: true, opacity: 0.55 })
-);
+const qEdgesMat = new THREE.LineBasicMaterial({ color: '#181715', transparent: true, opacity: 0.52 });
+const qEdges = new THREE.LineSegments(new THREE.EdgesGeometry(qSlabGeo, 26), qEdgesMat);
 quillGroup.add(qEdges);
 
 // Outer wireframe drafting bounding box (slightly expanded, dashed)
-const cageGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(1.78, 1.78, 0.42));
-const cageMat = new THREE.LineDashedMaterial({ color: '#1D4E89', dashSize: 0.06, gapSize: 0.05, transparent: true, opacity: 0.48 });
+const cageGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(1.76, 1.76, 0.40));
+const cageMat = new THREE.LineDashedMaterial({ color: '#1D4E89', dashSize: 0.06, gapSize: 0.05, transparent: true, opacity: 0.45 });
 const cage = new THREE.LineSegments(cageGeo, cageMat);
 cage.computeLineDistances();
 quillGroup.add(cage);
 
-// Sculpted matte-ink 3D Feather Quill centered on the slab
-const vane = new THREE.Shape();
-vane.moveTo(-0.34, -0.40);
-vane.bezierCurveTo(-0.30, -0.04, -0.12, 0.32, 0.38, 0.50);
-vane.bezierCurveTo(0.26, 0.25, 0.16, 0.10, 0.06, 0.05);
-vane.lineTo(0.16, 0.01);
-vane.bezierCurveTo(0.05, -0.15, -0.11, -0.28, -0.34, -0.40);
+// Exact Bootstrap Icons outline feather quill (clean hairline ink, no heavy black fill)
+const quillIconCanvas = document.createElement('canvas');
+quillIconCanvas.width = 512; quillIconCanvas.height = 512;
+const qctx = quillIconCanvas.getContext('2d');
+const quillIconTex = new THREE.CanvasTexture(quillIconCanvas);
+quillIconTex.colorSpace = THREE.SRGBColorSpace;
+quillIconTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
 
-const featherGeo = new THREE.ExtrudeGeometry(vane, {
-  depth: 0.036,
-  bevelEnabled: true,
-  bevelThickness: 0.01,
-  bevelSize: 0.008,
-  bevelSegments: 3,
-  curveSegments: 24
-});
-featherGeo.translate(0, 0, -0.018);
-const featherMesh = new THREE.Mesh(
-  featherGeo,
-  new THREE.MeshStandardMaterial({ color: '#181715', roughness: 0.42, metalness: 0.18 })
+const quillImg = new Image();
+quillImg.onload = () => {
+  qctx.clearRect(0, 0, 512, 512);
+  qctx.drawImage(quillImg, 64, 64, 384, 384);
+  quillIconTex.needsUpdate = true;
+};
+quillImg.src = 'assets/quill-icon.png';
+
+const quillEmblem = new THREE.Mesh(
+  new THREE.PlaneGeometry(1.06, 1.06),
+  new THREE.MeshBasicMaterial({ map: quillIconTex, transparent: true, depthWrite: false })
 );
-featherMesh.position.set(0.02, 0.02, 0.11);
-quillGroup.add(featherMesh);
-
-// Cobalt drafting rachis spine & nib highlight
-const spineCurve = new THREE.CatmullRomCurve3([
-  new THREE.Vector3(-0.42, -0.48, 0.13),
-  new THREE.Vector3(-0.08, -0.08, 0.135),
-  new THREE.Vector3(0.36, 0.48, 0.13)
-]);
-quillGroup.add(new THREE.Mesh(
-  new THREE.TubeGeometry(spineCurve, 28, 0.011, 10, false),
-  new THREE.MeshBasicMaterial({ color: '#1D4E89' })
-));
+quillEmblem.position.z = 0.095;
+quillGroup.add(quillEmblem);
 
 // Rotating schematic dashed & dotted rings around Quill
-const ringA = makeDashedRing(1.08, 0.07, 0.06, '#181715', 0.42);
+const ringA = makeDashedRing(1.06, 0.07, 0.06, '#181715', 0.40);
 ringA.rotation.set(0.28, 0.22, 0);
 quillGroup.add(ringA);
 
-const ringB = makeDashedRing(1.26, 0.02, 0.05, '#1D4E89', 0.65);
+const ringB = makeDashedRing(1.24, 0.02, 0.05, '#1D4E89', 0.62);
 ringB.rotation.set(-0.35, -0.18, 0);
 quillGroup.add(ringB);
 
@@ -501,13 +512,11 @@ function spawnSchematicPulse() {
 
 // ══════════════════════════════════════════════════════════════════════
 // B. SECONDARY DESTINATION — REAL-REFERENCE reMarkable Paper Pro
-//    (196.6 × 274.1 mm, thin uniform top/side bezels, subtle chin,
-//     brushed silver unibody, flush cylindrical Marker Plus with
-//     smooth taper, metal tip, and top eraser cap)
+//    Pushed deeper in Z-space for stronger perspective hierarchy.
 // ══════════════════════════════════════════════════════════════════════
 const rmGroup = new THREE.Group();
-rmGroup.position.set(2.05, -0.02, -0.55);
-rmGroup.rotation.set(0.08, -0.46, -0.02);
+rmGroup.position.set(2.65, 0.02, -2.15);
+rmGroup.rotation.set(0.08, -0.44, -0.02);
 worldGroup.add(rmGroup);
 
 const W = 1.62;
@@ -599,53 +608,56 @@ rmGroup.add(new THREE.LineLoop(
   new THREE.LineBasicMaterial({ color: '#A5A096', transparent: true, opacity: 0.75 })
 ));
 
-// ── Accurate 3D Marker Plus (built from real Elkjøp product photo!) ─
-// Slim ~1:13 cylinder, satin-charcoal barrel with subtle highlight,
-// crisp metallic collar ring, smooth gradual taper, machined silver-steel tip
+// ── Accurate 3D Marker Plus (verified against close-up official photos) ─
+// Uniform matte charcoal throughout; NO silver ring (just a hairline dark seam);
+// compact 0.5D eraser cap; matte-charcoal 2.2D cone; short blunt 0.18D carbon nib.
 const penGroup = new THREE.Group();
-const penBodyMat = new THREE.MeshStandardMaterial({ color: '#343331', roughness: 0.48, metalness: 0.16 });
-const penSeamMat = new THREE.MeshStandardMaterial({ color: '#C6C2B8', roughness: 0.28, metalness: 0.82 });
-const penTipMetal = new THREE.MeshStandardMaterial({ color: '#9E9B94', roughness: 0.22, metalness: 0.88 });
+const penBodyMat = new THREE.MeshStandardMaterial({ color: '#2B2A28', roughness: 0.72, metalness: 0.05 });
+const penSeamMat = new THREE.MeshStandardMaterial({ color: '#141413', roughness: 0.90, metalness: 0.02 });
+const penNibMat  = new THREE.MeshStandardMaterial({ color: '#3E3D3A', roughness: 0.62, metalness: 0.08 });
 
-const penR = 0.032; // slender authentic diameter
-const barrelLen = 1.24;
+const penR = 0.032;         // D = 0.064
+const penD = penR * 2;
+const barrelLen = 1.32;
 
-// 1. Main straight cylindrical matte-charcoal barrel
+// 1. Main straight matte-charcoal cylindrical barrel
 const barrel = new THREE.Mesh(new THREE.CylinderGeometry(penR, penR, barrelLen, 28), penBodyMat);
 penGroup.add(barrel);
 
-// 2. Crisp metallic top collar ring + flat-domed eraser cap
-const seam = new THREE.Mesh(new THREE.CylinderGeometry(penR * 1.02, penR * 1.02, 0.016, 28), penSeamMat);
-seam.position.y = barrelLen / 2 + 0.008;
+// 2. Hairline dark recessed seam (0.04D) + compact matte-charcoal eraser cap (0.5D)
+const seamH = penD * 0.04;
+const seam = new THREE.Mesh(new THREE.CylinderGeometry(penR * 0.94, penR * 0.94, seamH, 24), penSeamMat);
+seam.position.y = barrelLen / 2 + seamH / 2;
 penGroup.add(seam);
 
-const eraserBody = new THREE.Mesh(new THREE.CylinderGeometry(penR * 0.99, penR, 0.12, 28), penBodyMat);
-eraserBody.position.y = barrelLen / 2 + 0.076;
+const eraserH = penD * 0.42;
+const eraserBody = new THREE.Mesh(new THREE.CylinderGeometry(penR * 0.95, penR * 0.96, eraserH, 28), penBodyMat);
+eraserBody.position.y = barrelLen / 2 + seamH + eraserH / 2;
 penGroup.add(eraserBody);
 
 const eraserDome = new THREE.Mesh(
-  new THREE.SphereGeometry(penR * 0.99, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2),
+  new THREE.SphereGeometry(penR * 0.95, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2),
   penBodyMat
 );
-eraserDome.scale.y = 0.38;
-eraserDome.position.y = barrelLen / 2 + 0.136;
+eraserDome.scale.y = 0.32;
+eraserDome.position.y = barrelLen / 2 + seamH + eraserH;
 penGroup.add(eraserDome);
 
-// 3. Smooth gradual barrel taper (bottom 15%)
-const taperLen = 0.20;
-const taper = new THREE.Mesh(new THREE.CylinderGeometry(penR, penR * 0.40, taperLen, 28), penBodyMat);
+// 3. Gradual matte-charcoal taper cone (~2.2D long, same finish as barrel)
+const taperLen = penD * 2.2;
+const taper = new THREE.Mesh(new THREE.CylinderGeometry(penR, penR * 0.22, taperLen, 28), penBodyMat);
 taper.position.y = -barrelLen / 2 - taperLen / 2;
 penGroup.add(taper);
 
-// 4. Long, fine conical machined metal writing tip
-const tipLen = 0.18;
-const tipCone = new THREE.Mesh(new THREE.ConeGeometry(penR * 0.40, tipLen, 24), penTipMetal);
-tipCone.rotation.x = Math.PI;
-tipCone.position.y = -barrelLen / 2 - taperLen - tipLen / 2;
-penGroup.add(tipCone);
+// 4. Short, blunt rounded carbon nib (~0.18D protrusion — not a long sharp needle)
+const nibLen = penD * 0.18;
+const nibR = penD * 0.095;
+const nibMesh = new THREE.Mesh(new THREE.CapsuleGeometry(nibR, nibLen * 0.45, 6, 12), penNibMat);
+nibMesh.position.y = -barrelLen / 2 - taperLen - nibLen * 0.45;
+penGroup.add(nibMesh);
 
-// Dock Marker Plus cleanly alongside right edge with crisp visible separation
-penGroup.position.set(W / 2 + penR + 0.028, 0.06, 0.006);
+// Dock Marker Plus flush along right edge
+penGroup.position.set(W / 2 + penR + 0.016, 0.04, 0.004);
 rmGroup.add(penGroup);
 
 // ── E-Ink Screen Renderer ───────────────────────────────────────────
@@ -727,25 +739,26 @@ drawRMPage(0, 0);
 
 // ══════════════════════════════════════════════════════════════════════
 // C. 3D DASHED/DOTTED FLIGHT RAILS, ARROWS & SCHEMATIC PACKETS
+//    Sweeping from foreground Quill (z = +1.05) deep into recessed Paper Pro (z = -2.05)
 // ══════════════════════════════════════════════════════════════════════
 const railCurves = [
   new THREE.CatmullRomCurve3([
-    new THREE.Vector3(-0.02, 0.24, 0.50),
-    new THREE.Vector3(0.75, 0.72, 0.35),
-    new THREE.Vector3(1.52, 0.42, -0.15),
-    new THREE.Vector3(1.98, 0.14, -0.50)
+    new THREE.Vector3(-0.18, 0.24, 1.08),
+    new THREE.Vector3(0.72, 0.68, 0.22),
+    new THREE.Vector3(1.75, 0.38, -1.02),
+    new THREE.Vector3(2.55, 0.14, -2.06)
   ]),
   new THREE.CatmullRomCurve3([
-    new THREE.Vector3(-0.02, 0.04, 0.50),
-    new THREE.Vector3(0.78, 0.12, 0.28),
-    new THREE.Vector3(1.54, 0.05, -0.18),
-    new THREE.Vector3(1.98, 0.02, -0.50)
+    new THREE.Vector3(-0.18, 0.06, 1.08),
+    new THREE.Vector3(0.76, 0.14, 0.12),
+    new THREE.Vector3(1.78, 0.08, -1.06),
+    new THREE.Vector3(2.55, 0.04, -2.06)
   ]),
   new THREE.CatmullRomCurve3([
-    new THREE.Vector3(-0.02, -0.18, 0.50),
-    new THREE.Vector3(0.74, -0.56, 0.25),
-    new THREE.Vector3(1.50, -0.34, -0.20),
-    new THREE.Vector3(1.98, -0.12, -0.50)
+    new THREE.Vector3(-0.18, -0.16, 1.08),
+    new THREE.Vector3(0.70, -0.52, 0.05),
+    new THREE.Vector3(1.72, -0.32, -1.12),
+    new THREE.Vector3(2.55, -0.10, -2.06)
   ])
 ];
 
@@ -849,33 +862,64 @@ function dispatchPacket(nowSec) {
   spawnSchematicPulse();
 }
 
-// ── Interactive Orbit + Click / Hotkey Controls ─────────────────────
-let targetRX = 0.08, targetRY = 0.0;
-let curRX = 0.08, curRY = 0.0;
-let isDragging = false, lastX = 0, lastY = 0, dragX = 0, dragY = 0, downTime = 0;
+// ── Raycaster Hover & Press on Quill Entity + Subtle Parallax ───────
+const raycaster = new THREE.Raycaster();
+const pointerNDC = new THREE.Vector2(-10, -10);
+const quillCursor = document.getElementById('quill-cursor');
 
-canvas.addEventListener('pointerdown', (e) => {
-  isDragging = true; lastX = e.clientX; lastY = e.clientY; downTime = performance.now();
-});
+let isHoveringQuill = false;
+let isPressingQuill = false;
+let quillScaleCur = 1.0;
+let quillZOffsetCur = 0.0;
+let targetRX = 0.07, targetRY = 0.0;
+let curRX = 0.07, curRY = 0.0;
+
+function updateQuillHover(clientX, clientY) {
+  pointerNDC.x = (clientX / window.innerWidth) * 2 - 1;
+  pointerNDC.y = -(clientY / window.innerHeight) * 2 + 1;
+  raycaster.setFromCamera(pointerNDC, camera);
+  const hits = raycaster.intersectObjects([qSlab, quillEmblem], false);
+  const nowHover = hits.length > 0;
+  if (nowHover !== isHoveringQuill) {
+    isHoveringQuill = nowHover;
+    canvas.classList.toggle('hover-quill', isHoveringQuill);
+    quillCursor.classList.toggle('visible', isHoveringQuill);
+  }
+  if (isHoveringQuill) {
+    // Anchor fingertip hotspot (17.5, 4 in 40x40 SVG → ~19px, 4px in 44px box)
+    quillCursor.style.transform = `translate(${clientX - 18}px, ${clientY - 4}px)`;
+  }
+}
+
 window.addEventListener('pointermove', (e) => {
   mouseNX = e.clientX / window.innerWidth - 0.5;
   mouseNY = e.clientY / window.innerHeight - 0.5;
-  if (isDragging) {
-    dragY += (e.clientX - lastX) * 0.0065;
-    dragX += (e.clientY - lastY) * 0.0055;
-    dragX = Math.max(-0.55, Math.min(0.55, dragX));
-    dragY = Math.max(-0.85, Math.min(0.85, dragY));
-    lastX = e.clientX; lastY = e.clientY;
-  } else {
-    targetRY = mouseNX * 0.25;
-    targetRX = 0.08 + mouseNY * 0.16;
+  targetRY = mouseNX * 0.20;
+  targetRX = 0.07 + mouseNY * 0.12;
+  updateQuillHover(e.clientX, e.clientY);
+});
+
+canvas.addEventListener('pointerdown', (e) => {
+  updateQuillHover(e.clientX, e.clientY);
+  if (isHoveringQuill) {
+    isPressingQuill = true;
+    quillCursor.classList.add('pressed');
   }
 });
+
 window.addEventListener('pointerup', () => {
-  if (isDragging) {
-    isDragging = false;
-    if (performance.now() - downTime < 220) dispatchPacket(clock.getElapsedTime());
+  if (isPressingQuill) {
+    isPressingQuill = false;
+    quillCursor.classList.remove('pressed');
+    dispatchPacket(clock.getElapsedTime());
   }
+});
+
+window.addEventListener('pointerleave', () => {
+  isHoveringQuill = false;
+  isPressingQuill = false;
+  canvas.classList.remove('hover-quill');
+  quillCursor.classList.remove('visible', 'pressed');
 });
 
 document.getElementById('send-btn').addEventListener('click', () => dispatchPacket(clock.getElapsedTime()));
@@ -893,9 +937,11 @@ function handleResize() {
   camera.updateProjectionMatrix();
   renderer.setSize(w, h);
   const portrait = h > w;
-  camera.position.z = portrait ? 9.2 : 6.8;
-  quillGroup.position.x = portrait ? -0.45 : -0.78;
-  rmGroup.position.x = portrait ? 1.45 : 2.05;
+  camera.position.z = portrait ? 9.4 : 6.9;
+  quillGroup.position.x = portrait ? -0.52 : -0.92;
+  quillGroup.position.z = portrait ? 0.85 : 1.05;
+  rmGroup.position.x = portrait ? 1.85 : 2.65;
+  rmGroup.position.z = portrait ? -1.85 : -2.15;
 }
 handleResize();
 window.addEventListener('resize', handleResize);
@@ -912,17 +958,32 @@ function animate() {
   // 1. Living 2D technical schematic & fractal canvas
   drawSchematicBackground(t, bgPulse);
 
-  // 2. Smooth 3D orbit
-  if (!isDragging) { dragX *= 0.94; dragY *= 0.94; }
-  curRX += (targetRX + dragX - curRX) * 0.075;
-  curRY += (targetRY + dragY - curRY) * 0.075;
+  // 2. Smooth subtle 3D parallax
+  curRX += (targetRX - curRX) * 0.075;
+  curRY += (targetRY - curRY) * 0.075;
   worldGroup.rotation.set(curRX, curRY, 0);
 
-  // 3. Quill Entity technical motion
-  quillGroup.position.y = 0.06 + Math.sin(t * 1.2) * 0.05;
-  quillGroup.rotation.y = 0.22 + Math.sin(t * 0.7) * 0.07 + bgPulse * 0.10;
-  ringA.rotation.z = t * 0.32;
-  ringB.rotation.z = -t * 0.24;
+  // 3. Quill Entity technical motion + tactile hover & press feedback
+  const targetScale = isPressingQuill ? 0.93 : (isHoveringQuill ? 1.065 : 1.0);
+  const targetZOff  = isPressingQuill ? -0.10 : (isHoveringQuill ? 0.14 : 0.0);
+  quillScaleCur += (targetScale - quillScaleCur) * 0.18;
+  quillZOffsetCur += (targetZOff - quillZOffsetCur) * 0.18;
+
+  const baseZ = window.innerHeight > window.innerWidth ? 0.85 : 1.05;
+  quillGroup.position.y = 0.06 + Math.sin(t * 1.2) * 0.045;
+  quillGroup.position.z = baseZ + quillZOffsetCur;
+  quillGroup.scale.setScalar(quillScaleCur);
+  quillGroup.rotation.y = 0.22 + Math.sin(t * 0.7) * 0.06 + bgPulse * 0.09;
+
+  // Highlight CAD frame & tighten dashed cage on hover/press
+  qEdgesMat.color.set(isHoveringQuill ? '#1D4E89' : '#181715');
+  qEdgesMat.opacity = isHoveringQuill ? 0.92 : 0.52;
+  cageMat.opacity = isPressingQuill ? 0.90 : (isHoveringQuill ? 0.78 : 0.45);
+  const cageScale = isPressingQuill ? 0.95 : (isHoveringQuill ? 1.04 : 1.0);
+  cage.scale.lerp(new THREE.Vector3(cageScale, cageScale, cageScale), 0.16);
+
+  ringA.rotation.z = t * (isHoveringQuill ? 0.65 : 0.32);
+  ringB.rotation.z = -t * (isHoveringQuill ? 0.48 : 0.24);
   cage.rotation.z = Math.sin(t * 0.4) * 0.04;
 
   // 4. Secondary reMarkable Paper Pro subtle float
