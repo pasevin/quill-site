@@ -436,7 +436,7 @@ function makeDashedRing(radius, dashSize, gapSize, color, opacity = 0.65) {
 // A. CENTERPIECE HERO — QUILL TECHNICAL ENTITY (compact app-icon scale)
 // ══════════════════════════════════════════════════════════════════════
 const quillGroup = new THREE.Group();
-quillGroup.position.set(-1.15, 0.08, 0.65);
+quillGroup.position.set(-1.45, 0.08, 0.85);
 worldGroup.add(quillGroup);
 
 // Crisp matte architectural ceramic-ivory squircle (macOS app-icon proportion)
@@ -515,8 +515,9 @@ function spawnSchematicPulse() {
 //    Pushed deep in Z-space for strong perspective hierarchy.
 // ══════════════════════════════════════════════════════════════════════
 const rmGroup = new THREE.Group();
-rmGroup.position.set(3.35, 0.05, -3.65);
-rmGroup.rotation.set(0.08, -0.42, -0.02);
+rmGroup.position.set(2.05, 0.02, -0.35);
+rmGroup.scale.setScalar(1.42);
+rmGroup.rotation.set(0.06, -0.36, -0.015);
 worldGroup.add(rmGroup);
 
 const W = 1.62;
@@ -570,14 +571,6 @@ const bezelPlate = new THREE.Mesh(
 );
 bezelPlate.position.z = D / 2 + 0.0065;
 rmGroup.add(bezelPlate);
-
-// Top-left small recessed sensor/button detail (from real photo)
-const topDetail = new THREE.Mesh(
-  new THREE.CircleGeometry(0.016, 16),
-  new THREE.MeshBasicMaterial({ color: '#B6B3AC' })
-);
-topDetail.position.set(-W / 2 + 0.085, H / 2 - 0.048, D / 2 + 0.0072);
-rmGroup.add(topDetail);
 
 // Matte E-Ink Display (thin uniform top/left/right bezels, subtle wider bottom chin)
 const scrW = W - 0.125;
@@ -738,31 +731,31 @@ function drawRMPage(idx, flash = 0) {
 drawRMPage(0, 0);
 
 // ══════════════════════════════════════════════════════════════════════
-// C. 3D DASHED/DOTTED FLIGHT RAILS, ARROWS & SCHEMATIC PACKETS
-//    Sweeping from foreground Quill (z = +0.65) deep into recessed Paper Pro (z = -3.55)
+// C. 3D DASHED/DOTTED FLIGHT RAILS & SCHEMATIC PACKETS
+//    Sweeping cleanly from foreground Quill into the Paper Pro
 // ══════════════════════════════════════════════════════════════════════
 const railCurves = [
   new THREE.CatmullRomCurve3([
-    new THREE.Vector3(-0.68, 0.20, 0.66),
-    new THREE.Vector3(0.75, 0.76, -0.68),
-    new THREE.Vector3(2.20, 0.46, -2.25),
-    new THREE.Vector3(3.22, 0.16, -3.55)
+    new THREE.Vector3(-0.96, 0.22, 0.85),
+    new THREE.Vector3(0.05, 0.62, 0.45),
+    new THREE.Vector3(1.10, 0.34, 0.02),
+    new THREE.Vector3(1.88, 0.14, -0.28)
   ]),
   new THREE.CatmullRomCurve3([
-    new THREE.Vector3(-0.68, 0.08, 0.66),
-    new THREE.Vector3(0.80, 0.16, -0.78),
-    new THREE.Vector3(2.24, 0.10, -2.30),
-    new THREE.Vector3(3.22, 0.06, -3.55)
+    new THREE.Vector3(-0.96, 0.08, 0.85),
+    new THREE.Vector3(0.08, 0.12, 0.42),
+    new THREE.Vector3(1.12, 0.06, 0.00),
+    new THREE.Vector3(1.88, 0.02, -0.28)
   ]),
   new THREE.CatmullRomCurve3([
-    new THREE.Vector3(-0.68, -0.06, 0.66),
-    new THREE.Vector3(0.74, -0.52, -0.84),
-    new THREE.Vector3(2.16, -0.32, -2.38),
-    new THREE.Vector3(3.22, -0.08, -3.55)
+    new THREE.Vector3(-0.96, -0.06, 0.85),
+    new THREE.Vector3(0.04, -0.44, 0.38),
+    new THREE.Vector3(1.08, -0.26, -0.04),
+    new THREE.Vector3(1.88, -0.10, -0.28)
   ])
 ];
 
-// Render all 3 schematic dashed/dotted rails + crisp vector arrowheads
+// Render all 3 schematic dashed/dotted rails (no protruding cones on the screen)
 railCurves.forEach((curve, i) => {
   const pts = curve.getPoints(64);
   const geo = new THREE.BufferGeometry().setFromPoints(pts);
@@ -771,22 +764,11 @@ railCurves.forEach((curve, i) => {
     dashSize: i === 1 ? 0.08 : 0.03,
     gapSize: i === 1 ? 0.05 : 0.06,
     transparent: true,
-    opacity: i === 1 ? 0.72 : 0.42
+    opacity: i === 1 ? 0.68 : 0.38
   });
   const line = new THREE.Line(geo, mat);
   line.computeLineDistances();
   worldGroup.add(line);
-
-  // Crisp arrowhead cone at the end of each rail pointing into Paper Pro
-  const endPt = curve.getPoint(0.95);
-  const tan = curve.getTangent(0.95).normalize();
-  const arrow = new THREE.Mesh(
-    new THREE.ConeGeometry(0.032, 0.095, 12),
-    new THREE.MeshBasicMaterial({ color: i === 1 ? '#1D4E89' : '#6E6A62' })
-  );
-  arrow.position.copy(endPt);
-  arrow.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), tan);
-  worldGroup.add(arrow);
 });
 
 // Crisp minimalist drafting packet textures (.MD, HTML, .PDF, .EPUB)
@@ -938,10 +920,10 @@ function handleResize() {
   renderer.setSize(w, h);
   const portrait = h > w;
   camera.position.z = portrait ? 11.4 : 8.8;
-  quillGroup.position.x = portrait ? -0.68 : -1.15;
-  quillGroup.position.z = portrait ? 0.45 : 0.65;
-  rmGroup.position.x = portrait ? 2.25 : 3.35;
-  rmGroup.position.z = portrait ? -3.10 : -3.65;
+  quillGroup.position.x = portrait ? -0.95 : -1.45;
+  quillGroup.position.z = portrait ? 0.65 : 0.85;
+  rmGroup.position.x = portrait ? 1.35 : 2.05;
+  rmGroup.position.z = portrait ? -0.45 : -0.35;
 }
 handleResize();
 window.addEventListener('resize', handleResize);
@@ -969,7 +951,7 @@ function animate() {
   quillScaleCur += (targetScale - quillScaleCur) * 0.18;
   quillZOffsetCur += (targetZOff - quillZOffsetCur) * 0.18;
 
-  const baseZ = window.innerHeight > window.innerWidth ? 0.45 : 0.65;
+  const baseZ = window.innerHeight > window.innerWidth ? 0.65 : 0.85;
   quillGroup.position.y = 0.08 + Math.sin(t * 1.2) * 0.045;
   quillGroup.position.z = baseZ + quillZOffsetCur;
   quillGroup.scale.setScalar(quillScaleCur);
