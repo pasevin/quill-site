@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quill</title>
+<meta name="description" content="From your Mac to your reMarkable, in a keystroke.">
+<link rel="icon" type="image/png" href="assets/quill-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400&family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;1,6..72,400&display=swap" rel="stylesheet">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"
+  }
+}
+</script>
+<style>
+  :root {
+    --ink: #171614;
+    --ink-soft: #5A564E;
+    --ink-faint: #7E796F;
+    --cobalt: #1E4D8C;
+    --serif: "Instrument Serif", "Newsreader", Georgia, serif;
+    --mono: "JetBrains Mono", ui-monospace, monospace;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #EAE5DB;
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    user-select: none;
+  }
+
+  #webgl {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100dvh;
+    display: block;
+    cursor: grab;
+  }
+  #webgl:active { cursor: grabbing; }
+
+  /* Subtle photographic vignette & paper grain */
+  .vignette {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 2;
+    background: radial-gradient(ellipse 78% 72% at 50% 48%, transparent 55%, rgba(28, 25, 20, 0.085) 100%);
+  }
+
+  /* Minimal perimeter typography */
+  header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 10;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 28px 40px;
+    pointer-events: none;
+  }
+  .wordmark {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--ink);
+    text-decoration: none;
+    pointer-events: auto;
+  }
+  .wordmark svg { width: 17px; height: 17px; opacity: 0.9; }
+  .wordmark span {
+    font-family: var(--serif);
+    font-size: 24px;
+    letter-spacing: 0.01em;
+  }
+  .meta-tag {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
+  /* Single-sentence editorial caption */
+  footer {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 0 28px 34px;
+    gap: 14px;
+    pointer-events: none;
+  }
+  h1 {
+    font-family: var(--serif);
+    font-size: clamp(28px, 3.6vw, 44px);
+    font-weight: 400;
+    line-height: 1.1;
+    letter-spacing: -0.015em;
+    color: var(--ink);
+    text-shadow: 0 1px 18px rgba(244, 241, 234, 0.9);
+  }
+  h1 em {
+    font-style: italic;
+    color: var(--cobalt);
+  }
+  .controls {
+    display: inline-flex;
+    align-items: center;
+    gap: 16px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-faint);
+    pointer-events: auto;
+  }
+  .key-btn {
+    appearance: none;
+    background: rgba(255, 254, 250, 0.72);
+    border: 1px solid rgba(23, 22, 20, 0.16);
+    border-bottom-width: 2px;
+    border-radius: 6px;
+    padding: 5px 11px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink);
+    cursor: pointer;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    transition: transform 0.12s ease, background 0.15s ease;
+  }
+  .key-btn:hover { background: #FFFFFF; }
+  .key-btn:active { transform: translateY(1px); }
+  .controls a {
+    color: var(--ink-soft);
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+  .controls a:hover { color: var(--ink); }
+
+  @media (max-width: 640px) {
+    header { padding: 20px 22px; }
+    footer { padding: 0 20px 24px; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="webgl"></canvas>
+<div class="vignette" aria-hidden="true"></div>
+
+<header>
+  <a class="wordmark" href="#">
+    <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+      <path d="M15.807.531c-.174-.177-.41-.289-.64-.363a3.765 3.765 0 0 0-.833-.15c-.62-.049-1.394 0-2.252.175C10.365.545 8.264 1.415 6.315 3.1c-1.95 1.686-3.168 3.724-3.758 5.423-.294.847-.44 1.634-.429 2.268.005.316.05.62.154.88q.025.061.056.122A68 68 0 0 0 .08 15.198a.528.528 0 0 0 .157.72.504.504 0 0 0 .705-.16 67.6 67.6 0 0 1 2.158-3.26c.285.141.616.195.958.182.513-.02 1.098-.188 1.723-.49 1.25-.605 2.744-1.787 4.303-3.642l1.518-1.55a.53.53 0 0 0 0-.739l-.729-.744 1.311.209a.5.5 0 0 0 .443-.15l.663-.684c.663-.68 1.292-1.325 1.763-1.892.314-.378.585-.752.754-1.107.163-.345.278-.773.112-1.188a.5.5 0 0 0-.112-.172"/>
+    </svg>
+    <span>Quill</span>
+  </a>
+  <span class="meta-tag">macOS</span>
+</header>
+
+<footer>
+  <h1>From your Mac to your reMarkable, <em>in a keystroke.</em></h1>
+  <div class="controls">
+    <button class="key-btn" id="send-btn" type="button" title="Send a page (Space or ⌥⌘R)">⌥⌘R</button>
+    <span>drag to orbit</span>
+    <span>·</span>
+    <a href="https://github.com/pasevin">GitHub</a>
+  </div>
+</footer>
+
+<script type="module">
+import * as THREE from 'three';
+
+// ── Renderer & Scene ────────────────────────────────────────────────
+const canvas = document.getElementById('webgl');
+const renderer = new THREE.WebGLRenderer({
+  canvas,
+  antialias: true,
+  alpha: false,
+  powerPreference: 'high-performance'
+});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.06;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('#EAE5DB');
+scene.fog = new THREE.Fog('#EAE5DB', 9.5, 19);
+
+const camera = new THREE.PerspectiveCamera(34, window.innerWidth / window.innerHeight, 0.1, 40);
+camera.position.set(0.35, 0.45, 6.2);
+camera.lookAt(0, -0.08, 0);
+
+// ── Procedural Studio HDRI Environment (PMREM) ──────────────────────
+function buildStudioEnvironment(renderer) {
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  const envScene = new THREE.Scene();
+  envScene.background = new THREE.Color('#E6E0D4');
+
+  // Warm overhead gallery softbox
+  const topBox = new THREE.Mesh(
+    new THREE.PlaneGeometry(14, 14),
+    new THREE.MeshBasicMaterial({ color: new THREE.Color(2.2, 2.12, 1.98), side: THREE.DoubleSide })
+  );
+  topBox.position.set(0, 6.5, 1.5);
+  topBox.rotation.x = Math.PI / 2;
+  envScene.add(topBox);
+
+  // Crisp cool-white side rim light strip (catches aluminum bevels)
+  const rimStrip = new THREE.Mesh(
+    new THREE.PlaneGeometry(3, 12),
+    new THREE.MeshBasicMaterial({ color: new THREE.Color(2.6, 2.7, 2.85), side: THREE.DoubleSide })
+  );
+  rimStrip.position.set(6.5, 1.5, 2);
+  rimStrip.rotation.y = -Math.PI / 2.2;
+  envScene.add(rimStrip);
+
+  // Warm sunlight window accent on left
+  const warmWindow = new THREE.Mesh(
+    new THREE.PlaneGeometry(6, 9),
+    new THREE.MeshBasicMaterial({ color: new THREE.Color(2.3, 2.05, 1.75), side: THREE.DoubleSide })
+  );
+  warmWindow.position.set(-6.5, 2.5, 3);
+  warmWindow.rotation.y = Math.PI / 2.5;
+  envScene.add(warmWindow);
+
+  // Dark studio negative fill (gives aluminum real contrast)
+  const negFill = new THREE.Mesh(
+    new THREE.PlaneGeometry(14, 10),
+    new THREE.MeshBasicMaterial({ color: new THREE.Color(0.25, 0.24, 0.22), side: THREE.DoubleSide })
+  );
+  negFill.position.set(0, -5, -4);
+  envScene.add(negFill);
+
+  const envRT = pmrem.fromScene(envScene, 0.04);
+  pmrem.dispose();
+  return envRT.texture;
+}
+scene.environment = buildStudioEnvironment(renderer);
+
+// ── Studio Lights ───────────────────────────────────────────────────
+const ambient = new THREE.HemisphereLight('#FFFDF8', '#CFC6B6', 0.85);
+scene.add(ambient);
+
+const keyLight = new THREE.DirectionalLight('#FFF6E8', 2.0);
+keyLight.position.set(-3.2, 5.4, 4.6);
+keyLight.castShadow = true;
+keyLight.shadow.mapSize.set(2048, 2048);
+keyLight.shadow.camera.near = 1;
+keyLight.shadow.camera.far = 16;
+keyLight.shadow.camera.left = -4.2;
+keyLight.shadow.camera.right = 4.2;
+keyLight.shadow.camera.top = 4.2;
+keyLight.shadow.camera.bottom = -4.2;
+keyLight.shadow.bias = -0.0004;
+keyLight.shadow.radius = 4;
+scene.add(keyLight);
+
+const rimLight = new THREE.DirectionalLight('#DCE8FA', 1.15);
+rimLight.position.set(4.5, 2.2, -3.2);
+scene.add(rimLight);
+
+// ── Architectural Desk Plane (receives real soft shadow) ────────────
+const deskGeo = new THREE.PlaneGeometry(26, 26);
+const deskMat = new THREE.ShadowMaterial({ opacity: 0.16, color: '#24201A' });
+const deskShadowPlane = new THREE.Mesh(deskGeo, deskMat);
+deskShadowPlane.rotation.x = -Math.PI / 2;
+deskShadowPlane.position.y = -1.78;
+deskShadowPlane.receiveShadow = true;
+scene.add(deskShadowPlane);
+
+// Subtle concentric architectural plinth ring on the floor
+const ringGeo = new THREE.RingGeometry(1.75, 1.765, 96);
+const ringMat = new THREE.MeshBasicMaterial({
+  color: '#CFC8BA',
+  transparent: true,
+  opacity: 0.5,
+  side: THREE.DoubleSide
+});
+const plinthRing = new THREE.Mesh(ringGeo, ringMat);
+plinthRing.rotation.x = -Math.PI / 2;
+plinthRing.position.y = -1.775;
+scene.add(plinthRing);
+
+// ── Procedural Brushed Aluminum & E-Ink Textures ────────────────────
+function makeBrushedMetalMap() {
+  const c = document.createElement('canvas');
+  c.width = 512; c.height = 512;
+  const g = c.getContext('2d');
+  g.fillStyle = '#D8D4CC';
+  g.fillRect(0, 0, 512, 512);
+  for (let y = 0; y < 512; y++) {
+    const v = 204 + Math.floor((Math.random() - 0.5) * 18);
+    g.fillStyle = `rgb(${v},${v-2},${v-6})`;
+    g.fillRect(0, y, 512, 1);
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+// High-res E-Ink Canvas Texture (1024x1366 — 3:4 exact Canvas Color ratio)
+const screenCanvas = document.createElement('canvas');
+screenCanvas.width = 1024;
+screenCanvas.height = 1366;
+const sctx = screenCanvas.getContext('2d');
+const screenTexture = new THREE.CanvasTexture(screenCanvas);
+screenTexture.colorSpace = THREE.SRGBColorSpace;
+screenTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+
+// Draw one of 3 gallery-grade pages + live animated pen stroke + e-ink flicker
+function renderEInkPage(pageIndex, strokeProgress = 1, flashAmount = 0) {
+  const W = screenCanvas.width;
+  const H = screenCanvas.height;
+
+  // Warm Canvas Color e-ink paper base
+  sctx.fillStyle = '#F5F3EC';
+  sctx.fillRect(0, 0, W, H);
+
+  // Micro paper grain (subtle)
+  sctx.fillStyle = 'rgba(23,22,20,0.018)';
+  for (let i = 0; i < 650; i++) {
+    const x = (i * 197) % W;
+    const y = (i * 353) % H;
+    sctx.fillRect(x, y, 2, 2);
+  }
+
+  // Top hairline & minimal index
+  const labels = ['01  ·  ARCHITECTURE', '02  ·  ON QUIET TOOLS', '03  ·  SPATIAL STUDY'];
+  sctx.fillStyle = '#847E73';
+  sctx.font = '400 22px "JetBrains Mono", monospace';
+  sctx.fillText(labels[pageIndex], 78, 86);
+  sctx.strokeStyle = '#DDD7CB';
+  sctx.lineWidth = 2;
+  sctx.beginPath();
+  sctx.moveTo(78, 112);
+  sctx.lineTo(W - 78, 112);
+  sctx.stroke();
+
+  if (pageIndex === 0) {
+    // Study 1: Minimalist serif notes + structured table + animated cobalt underline & sketch
+    sctx.fillStyle = '#171614';
+    sctx.font = '400 84px "Instrument Serif", Georgia, serif';
+    sctx.fillText('Architecture', 78, 224);
+
+    // Animated cobalt pen underline
+    if (strokeProgress > 0) {
+      sctx.strokeStyle = '#1E4D8C';
+      sctx.lineWidth = 6;
+      sctx.lineCap = 'round';
+      sctx.beginPath();
+      const endX = 78 + 380 * Math.min(1, strokeProgress * 1.4);
+      sctx.moveTo(78, 246);
+      sctx.quadraticCurveTo(260, 236, endX, 248);
+      sctx.stroke();
+    }
+
+    // Abstract typographic lines
+    sctx.strokeStyle = '#33312D';
+    sctx.lineWidth = 5;
+    sctx.lineCap = 'round';
+    const lines = [820, 760, 640];
+    lines.forEach((len, i) => {
+      sctx.beginPath();
+      sctx.moveTo(78, 330 + i * 52);
+      sctx.lineTo(78 + len, 330 + i * 52);
+      sctx.stroke();
+    });
+
+    // Crisp e-ink table
+    sctx.fillStyle = '#ECE8DF';
+    sctx.fillRect(78, 530, W - 156, 310);
+    sctx.strokeStyle = '#CFC8BA';
+    sctx.lineWidth = 2.5;
+    sctx.strokeRect(78, 530, W - 156, 310);
+    sctx.beginPath();
+    sctx.moveTo(78, 622); sctx.lineTo(W - 78, 622);
+    sctx.moveTo(78, 730); sctx.lineTo(W - 78, 730);
+    sctx.moveTo(W * 0.48, 530); sctx.lineTo(W * 0.48, 840);
+    sctx.stroke();
+
+    // Table abstract strokes
+    sctx.strokeStyle = '#171614'; sctx.lineWidth = 5;
+    sctx.beginPath();
+    sctx.moveTo(116, 576); sctx.lineTo(310, 576);
+    sctx.moveTo(W * 0.48 + 38, 576); sctx.lineTo(W * 0.48 + 260, 576);
+    sctx.stroke();
+
+    sctx.strokeStyle = '#6D685F'; sctx.lineWidth = 4;
+    sctx.beginPath();
+    sctx.moveTo(116, 676); sctx.lineTo(360, 676);
+    sctx.moveTo(W * 0.48 + 38, 676); sctx.lineTo(W * 0.48 + 310, 676);
+    sctx.moveTo(116, 786); sctx.lineTo(290, 786);
+    sctx.moveTo(W * 0.48 + 38, 786); sctx.lineTo(W * 0.48 + 240, 786);
+    sctx.stroke();
+
+    // Animated handwritten cobalt gesture below
+    if (strokeProgress > 0.25) {
+      const p = Math.min(1, (strokeProgress - 0.25) / 0.75);
+      sctx.strokeStyle = '#1E4D8C';
+      sctx.lineWidth = 5.5;
+      sctx.lineCap = 'round';
+      sctx.beginPath();
+      const pts = [
+        [96, 985], [155, 945], [205, 1015], [275, 955],
+        [345, 1005], [425, 952], [495, 992], [585, 960]
+      ];
+      const count = Math.max(2, Math.floor(pts.length * p));
+      sctx.moveTo(pts[0][0], pts[0][1]);
+      for (let i = 1; i < count; i++) {
+        const prev = pts[i - 1];
+        const cur = pts[i];
+        sctx.quadraticCurveTo(prev[0], prev[1], (prev[0] + cur[0]) / 2, (prev[1] + cur[1]) / 2);
+      }
+      sctx.stroke();
+    }
+  } else if (pageIndex === 1) {
+    // Study 2: Calm long-form reading with warm terracotta highlighter & margin bracket
+    sctx.fillStyle = '#171614';
+    sctx.font = '400 84px "Instrument Serif", Georgia, serif';
+    sctx.fillText('On Quiet Tools', 78, 224);
+
+    // Warm terracotta highlighter sweep
+    if (strokeProgress > 0) {
+      sctx.fillStyle = 'rgba(182, 73, 51, 0.17)';
+      sctx.fillRect(74, 304, 680 * Math.min(1, strokeProgress * 1.25), 36);
+    }
+
+    sctx.strokeStyle = '#2E2C28';
+    sctx.lineWidth = 5;
+    sctx.lineCap = 'round';
+    [840, 810, 850, 620].forEach((len, i) => {
+      sctx.beginPath();
+      sctx.moveTo(78, 322 + i * 62);
+      sctx.lineTo(78 + len, 322 + i * 62);
+      sctx.stroke();
+    });
+
+    sctx.strokeStyle = '#6B665D';
+    sctx.lineWidth = 4.5;
+    [830, 790, 845, 740, 520].forEach((len, i) => {
+      sctx.beginPath();
+      sctx.moveTo(78, 650 + i * 62);
+      sctx.lineTo(78 + len, 650 + i * 62);
+      sctx.stroke();
+    });
+
+    // Animated terracotta margin bracket
+    if (strokeProgress > 0.35) {
+      const p = Math.min(1, (strokeProgress - 0.35) / 0.65);
+      sctx.strokeStyle = '#B64933';
+      sctx.lineWidth = 6;
+      sctx.beginPath();
+      sctx.moveTo(942, 300);
+      sctx.lineTo(958, 300);
+      sctx.lineTo(958, 300 + 230 * p);
+      if (p > 0.95) sctx.lineTo(942, 530);
+      sctx.stroke();
+    }
+  } else {
+    // Study 3: Architectural geometric diagram + two-column layout
+    sctx.fillStyle = '#171614';
+    sctx.font = '400 76px "Instrument Serif", Georgia, serif';
+    sctx.fillText('Fig. 3 — Spatial', 78, 220);
+
+    sctx.fillStyle = '#ECE8DF';
+    sctx.fillRect(78, 286, W - 156, 480);
+    sctx.strokeStyle = '#CFC8BA';
+    sctx.lineWidth = 2.5;
+    sctx.strokeRect(78, 286, W - 156, 480);
+
+    // Intersecting geometric circles
+    sctx.strokeStyle = '#171614';
+    sctx.lineWidth = 4;
+    sctx.beginPath();
+    sctx.arc(W * 0.39, 526, 138, 0, Math.PI * 2);
+    sctx.stroke();
+
+    sctx.strokeStyle = '#1E4D8C';
+    sctx.setLineDash([12, 10]);
+    sctx.beginPath();
+    sctx.arc(W * 0.61, 526, 138, 0, Math.PI * 2);
+    sctx.stroke();
+    sctx.setLineDash([]);
+
+    // Animated terracotta axis line
+    if (strokeProgress > 0) {
+      const p = Math.min(1, strokeProgress * 1.2);
+      sctx.strokeStyle = '#B64933';
+      sctx.lineWidth = 5;
+      sctx.beginPath();
+      sctx.moveTo(220, 526);
+      sctx.lineTo(220 + 584 * p, 526);
+      sctx.stroke();
+      sctx.fillStyle = '#1E4D8C';
+      sctx.beginPath();
+      sctx.arc(W * 0.5, 526, 12, 0, Math.PI * 2);
+      sctx.fill();
+    }
+
+    // Two-column research strokes
+    sctx.strokeStyle = '#33312D';
+    sctx.lineWidth = 4.5;
+    sctx.lineCap = 'round';
+    for (let i = 0; i < 5; i++) {
+      const y = 858 + i * 56;
+      sctx.beginPath();
+      sctx.moveTo(78, y); sctx.lineTo(460 - (i === 4 ? 110 : 0), y);
+      sctx.moveTo(540, y); sctx.lineTo(930 - (i === 4 ? 140 : 0), y);
+      sctx.stroke();
+    }
+  }
+
+  // Page index footer
+  sctx.fillStyle = '#847E73';
+  sctx.font = '400 22px "JetBrains Mono", monospace';
+  sctx.fillText(`0${pageIndex + 1}`, W - 110, H - 56);
+
+  // Authentic e-ink full-screen inversion flicker overlay
+  if (flashAmount > 0.01) {
+    sctx.fillStyle = `rgba(22, 21, 19, ${flashAmount * 0.85})`;
+    sctx.fillRect(0, 0, W, H);
+  }
+
+  screenTexture.needsUpdate = true;
+}
+
+// ── Build Rounded Rect Shape Helper ─────────────────────────────────
+function roundedRectShape(w, h, r) {
+  const s = new THREE.Shape();
+  const x = -w / 2, y = -h / 2;
+  s.moveTo(x + r, y);
+  s.lineTo(x + w - r, y);
+  s.quadraticCurveTo(x + w, y, x + w, y + r);
+  s.lineTo(x + w, y + h - r);
+  s.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  s.lineTo(x + r, y + h);
+  s.quadraticCurveTo(x, y + h, x, y + h - r);
+  s.lineTo(x, y + r);
+  s.quadraticCurveTo(x, y, x + r, y);
+  return s;
+}
+
+// ── Hardware-Accurate 3D reMarkable Paper Pro Group ─────────────────
+const tabletGroup = new THREE.Group();
+scene.add(tabletGroup);
+
+const W = 1.966;
+const H = 2.741;
+const D = 0.056;
+const R = 0.085;
+
+const metalTex = makeBrushedMetalMap();
+const aluminumMat = new THREE.MeshStandardMaterial({
+  color: '#D9D5CD',
+  map: metalTex,
+  metalness: 0.78,
+  roughness: 0.28,
+  envMapIntensity: 1.15
+});
+const grooveMat = new THREE.MeshStandardMaterial({
+  color: '#9B968C',
+  metalness: 0.65,
+  roughness: 0.42
+});
+const bezelMat = new THREE.MeshPhysicalMaterial({
+  color: '#E9E6DF',
+  roughness: 0.56,
+  metalness: 0.02,
+  clearcoat: 0.14,
+  clearcoatRoughness: 0.45
+});
+
+// Main extruded aluminum unibody
+const bodyGeo = new THREE.ExtrudeGeometry(roundedRectShape(W, H, R), {
+  depth: D,
+  bevelEnabled: true,
+  bevelThickness: 0.008,
+  bevelSize: 0.008,
+  bevelSegments: 5,
+  curveSegments: 24
+});
+bodyGeo.translate(0, 0, -D / 2);
+const bodyMesh = new THREE.Mesh(bodyGeo, aluminumMat);
+bodyMesh.castShadow = true;
+bodyMesh.receiveShadow = true;
+tabletGroup.add(bodyMesh);
+
+// Signature Paper Pro dual corrugated side grooves (like stacked paper pages)
+[-0.011, 0.011].forEach((zOff) => {
+  const gGeo = new THREE.ExtrudeGeometry(roundedRectShape(W + 0.013, H + 0.013, R + 0.004), {
+    depth: 0.0045,
+    bevelEnabled: false,
+    curveSegments: 20
+  });
+  gGeo.translate(0, 0, zOff - 0.00225);
+  const gMesh = new THREE.Mesh(gGeo, grooveMat);
+  tabletGroup.add(gMesh);
+});
+
+// Pale textured-glass front bezel plate
+const bezelGeo = new THREE.ShapeGeometry(roundedRectShape(W - 0.024, H - 0.024, R - 0.012), 20);
+const bezelMesh = new THREE.Mesh(bezelGeo, bezelMat);
+bezelMesh.position.z = D / 2 + 0.0086;
+bezelMesh.receiveShadow = true;
+tabletGroup.add(bezelMesh);
+
+// 11.8" Canvas Color E-Ink Screen (slim top/sides, authentic wider bottom chin)
+const scrW = W - 0.175;
+const scrH = H - 0.36;
+const scrY = 0.075; // shifts screen up to create the Paper Pro bottom chin
+const screenGeo = new THREE.PlaneGeometry(scrW, scrH);
+const screenMat = new THREE.MeshPhysicalMaterial({
+  map: screenTexture,
+  roughness: 0.68,
+  metalness: 0.0,
+  clearcoat: 0.08,
+  clearcoatRoughness: 0.55
+});
+const screenMesh = new THREE.Mesh(screenGeo, screenMat);
+screenMesh.position.set(0, scrY, D / 2 + 0.0096);
+screenMesh.receiveShadow = true;
+tabletGroup.add(screenMesh);
+
+// Subtle recessed hairline border around the e-ink display
+const scrBorder = new THREE.LineLoop(
+  new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(-scrW / 2, scrY - scrH / 2, D / 2 + 0.0102),
+    new THREE.Vector3( scrW / 2, scrY - scrH / 2, D / 2 + 0.0102),
+    new THREE.Vector3( scrW / 2, scrY + scrH / 2, D / 2 + 0.0102),
+    new THREE.Vector3(-scrW / 2, scrY + scrH / 2, D / 2 + 0.0102),
+  ]),
+  new THREE.LineBasicMaterial({ color: '#C6C0B4', transparent: true, opacity: 0.7 })
+);
+tabletGroup.add(scrBorder);
+
+// Top-left sleep/wake button
+const powerBtn = new THREE.Mesh(
+  new THREE.BoxGeometry(0.14, 0.018, 0.022),
+  aluminumMat
+);
+powerBtn.position.set(-W / 2 + 0.25, H / 2 + 0.012, 0);
+tabletGroup.add(powerBtn);
+
+// Four tiny rubberized feet on the rear (detail visible when user orbits to back!)
+const footGeo = new THREE.CylinderGeometry(0.032, 0.032, 0.006, 16);
+const footMat = new THREE.MeshStandardMaterial({ color: '#4B4843', roughness: 0.9 });
+[[-0.76, 1.15], [0.76, 1.15], [-0.76, -1.15], [0.76, -1.15]].forEach(([fx, fy]) => {
+  const foot = new THREE.Mesh(footGeo, footMat);
+  foot.rotation.x = Math.PI / 2;
+  foot.position.set(fx, fy, -D / 2 - 0.009);
+  tabletGroup.add(foot);
+});
+
+// ── 3D Marker Plus Stylus (LatheGeometry, docked magnetically) ───────
+const markerGroup = new THREE.Group();
+const markerMat = new THREE.MeshStandardMaterial({
+  color: '#252422',
+  roughness: 0.66,
+  metalness: 0.08
+});
+const ringMetalMat = new THREE.MeshStandardMaterial({
+  color: '#B8B3A8',
+  metalness: 0.85,
+  roughness: 0.25
+});
+const nibMat = new THREE.MeshStandardMaterial({
+  color: '#4E4C47',
+  roughness: 0.8
+});
+
+// Turned cylindrical stylus barrel + tapered cone
+const markerPts = [
+  new THREE.Vector2(0.001, -0.84),
+  new THREE.Vector2(0.011, -0.82),
+  new THREE.Vector2(0.044, -0.68),
+  new THREE.Vector2(0.045,  0.66),
+  new THREE.Vector2(0.042,  0.68),
+];
+const markerShaft = new THREE.Mesh(new THREE.LatheGeometry(markerPts, 28), markerMat);
+markerShaft.castShadow = true;
+markerGroup.add(markerShaft);
+
+// Metallic eraser collar ring
+const collar = new THREE.Mesh(new THREE.CylinderGeometry(0.0455, 0.0455, 0.016, 28), ringMetalMat);
+collar.position.y = 0.688;
+markerGroup.add(collar);
+
+// Rounded built-in eraser cap
+const eraser = new THREE.Mesh(new THREE.CapsuleGeometry(0.043, 0.06, 8, 20), markerMat);
+eraser.position.y = 0.75;
+eraser.castShadow = true;
+markerGroup.add(eraser);
+
+// Carbon tip nib
+const nib = new THREE.Mesh(new THREE.ConeGeometry(0.011, 0.045, 16), nibMat);
+nib.rotation.x = Math.PI;
+nib.position.y = -0.85;
+markerGroup.add(nib);
+
+markerGroup.position.set(W / 2 + 0.062, 0.06, 0.004);
+tabletGroup.add(markerGroup);
+
+// ── Real 3D Curling Flying Paper Sheet (Vertex-Deformed Mesh) ───────
+const sheetSegX = 28, sheetSegY = 36;
+const sheetGeo = new THREE.PlaneGeometry(scrW * 0.96, scrH * 0.96, sheetSegX, sheetSegY);
+const basePos = Float32Array.from(sheetGeo.attributes.position.array);
+
+const sheetCanvas = document.createElement('canvas');
+sheetCanvas.width = 512; sheetCanvas.height = 680;
+const shCtx = sheetCanvas.getContext('2d');
+shCtx.fillStyle = '#FCFBF7';
+shCtx.fillRect(0, 0, 512, 680);
+shCtx.fillStyle = '#171614';
+shCtx.fillRect(46, 62, 220, 14);
+shCtx.fillStyle = '#1E4D8C';
+shCtx.fillRect(46, 94, 150, 5);
+shCtx.fillStyle = 'rgba(23,22,20,0.22)';
+for (let i = 0; i < 8; i++) {
+  shCtx.fillRect(46, 142 + i * 34, 340 + ((i * 73) % 90) - 40, 6);
+}
+const sheetTex = new THREE.CanvasTexture(sheetCanvas);
+sheetTex.colorSpace = THREE.SRGBColorSpace;
+
+const sheetMat = new THREE.MeshPhysicalMaterial({
+  map: sheetTex,
+  color: '#FFFFFF',
+  roughness: 0.72,
+  metalness: 0.0,
+  transparent: true,
+  opacity: 0,
+  side: THREE.DoubleSide
+});
+const flyingSheet = new THREE.Mesh(sheetGeo, sheetMat);
+flyingSheet.castShadow = true;
+tabletGroup.add(flyingSheet);
+
+// 3D curved flight trajectory in tablet-local space
+const flightCurve = new THREE.CatmullRomCurve3([
+  new THREE.Vector3(-2.6, 1.55, 2.3),
+  new THREE.Vector3(-1.15, 0.95, 1.35),
+  new THREE.Vector3(-0.22, 0.34, 0.45),
+  new THREE.Vector3(0.0, scrY, D / 2 + 0.022)
+]);
+
+function deformSheet(u, time) {
+  // u in [0,1]: billow & curl mid-air, flatten cleanly as it touches the glass
+  const airFactor = Math.sin(u * Math.PI);
+  const pos = sheetGeo.attributes.position;
+  for (let i = 0; i < pos.count; i++) {
+    const bx = basePos[i * 3];
+    const by = basePos[i * 3 + 1];
+    const curl = Math.sin(bx * 2.4 + time * 4.5) * 0.14 * airFactor
+               + Math.cos(by * 1.9 - time * 3.8) * 0.11 * airFactor
+               - (bx * bx + by * by * 0.4) * 0.16 * airFactor;
+    pos.setZ(i, curl);
+  }
+  pos.needsUpdate = true;
+  sheetGeo.computeVertexNormals();
+}
+
+// ── 3D Ink Particle Ribbon Following the Flight Arc ─────────────────
+const PARTICLE_COUNT = 64;
+const pPositions = new Float32Array(PARTICLE_COUNT * 3);
+const pColors = new Float32Array(PARTICLE_COUNT * 3);
+const pData = [];
+const cCobalt = new THREE.Color('#1E4D8C');
+const cGraphite = new THREE.Color('#2B2926');
+
+for (let i = 0; i < PARTICLE_COUNT; i++) {
+  pData.push({ t: Math.random(), speed: 0.45 + Math.random() * 0.4, spread: 0.16 + Math.random() * 0.25, seed: Math.random() * 10 });
+  const c = i % 3 === 0 ? cGraphite : cCobalt;
+  pColors[i * 3] = c.r; pColors[i * 3 + 1] = c.g; pColors[i * 3 + 2] = c.b;
+}
+const pGeo = new THREE.BufferGeometry();
+pGeo.setAttribute('position', new THREE.BufferAttribute(pPositions, 3));
+pGeo.setAttribute('color', new THREE.BufferAttribute(pColors, 3));
+
+// Soft circular sprite texture for particles
+const dotCanvas = document.createElement('canvas');
+dotCanvas.width = 64; dotCanvas.height = 64;
+const dctx = dotCanvas.getContext('2d');
+const grad = dctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+grad.addColorStop(0, 'rgba(255,255,255,1)');
+grad.addColorStop(0.5, 'rgba(255,255,255,0.55)');
+grad.addColorStop(1, 'rgba(255,255,255,0)');
+dctx.fillStyle = grad;
+dctx.fillRect(0, 0, 64, 64);
+
+const pMat = new THREE.PointsMaterial({
+  size: 0.055,
+  map: new THREE.CanvasTexture(dotCanvas),
+  vertexColors: true,
+  transparent: true,
+  opacity: 0,
+  depthWrite: false
+});
+const inkRibbon = new THREE.Points(pGeo, pMat);
+tabletGroup.add(inkRibbon);
+
+// ── Animation & Flight State Machine ────────────────────────────────
+let pageIndex = 0;
+let strokeProgress = 1;
+let flightActive = false;
+let flightStart = 0;
+const FLIGHT_DURATION = 1.45;
+let eInkFlashEnd = 0;
+let landedTriggered = false;
+
+renderEInkPage(0, 1, 0);
+
+function triggerFlight(nowSec) {
+  if (flightActive) return;
+  flightActive = true;
+  landedTriggered = false;
+  flightStart = nowSec;
+}
+
+// ── Interactive Orbit + Spring Return + Mouse Parallax ──────────────
+const BASE_RX = 0.24;
+const BASE_RY = -0.34;
+const BASE_RZ = 0.05;
+
+let targetRX = BASE_RX;
+let targetRY = BASE_RY;
+let curRX = BASE_RX;
+let curRY = BASE_RY;
+let isDragging = false;
+let lastX = 0, lastY = 0;
+let dragOffsetX = 0, dragOffsetY = 0;
+let pointerDownTime = 0;
+
+canvas.addEventListener('pointerdown', (e) => {
+  isDragging = true;
+  lastX = e.clientX;
+  lastY = e.clientY;
+  pointerDownTime = performance.now();
+});
+
+window.addEventListener('pointermove', (e) => {
+  if (isDragging) {
+    const dx = e.clientX - lastX;
+    const dy = e.clientY - lastY;
+    lastX = e.clientX;
+    lastY = e.clientY;
+    dragOffsetY += dx * 0.0085;
+    dragOffsetX += dy * 0.0075;
+    dragOffsetX = Math.max(-1.05, Math.min(1.05, dragOffsetX));
+  } else {
+    const nx = e.clientX / window.innerWidth - 0.5;
+    const ny = e.clientY / window.innerHeight - 0.5;
+    targetRY = BASE_RY + nx * 0.42;
+    targetRX = BASE_RX + ny * 0.26;
+  }
+});
+
+window.addEventListener('pointerup', (e) => {
+  if (isDragging) {
+    isDragging = false;
+    // Quick click (not a drag) launches a curling sheet!
+    if (performance.now() - pointerDownTime < 220 && Math.abs(dragOffsetX) < 0.08 && Math.abs(dragOffsetY) < 0.08) {
+      triggerFlight(clock.getElapsedTime());
+    }
+  }
+});
+
+document.getElementById('send-btn').addEventListener('click', () => {
+  triggerFlight(clock.getElapsedTime());
+});
+
+window.addEventListener('keydown', (e) => {
+  if (e.code === 'Space' || (e.metaKey && e.altKey && e.code === 'KeyR')) {
+    e.preventDefault();
+    triggerFlight(clock.getElapsedTime());
+  }
+});
+
+// Responsive camera distance so tablet frames beautifully on mobile & ultrawide
+function updateCameraFit() {
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  renderer.setSize(w, h);
+  const portrait = h > w;
+  camera.position.z = portrait ? 7.6 : 6.1;
+  camera.position.y = portrait ? 0.35 : 0.42;
+}
+updateCameraFit();
+window.addEventListener('resize', updateCameraFit);
+
+// ── Main 60fps Loop ─────────────────────────────────────────────────
+const clock = new THREE.Clock();
+let nextAutoFlight = 2.4;
+
+function animate() {
+  requestAnimationFrame(animate);
+  const t = clock.getElapsedTime();
+
+  // Gentle spring return after drag
+  if (!isDragging) {
+    dragOffsetX *= 0.94;
+    dragOffsetY *= 0.94;
+  }
+
+  // Subtle organic levitation breathing
+  tabletGroup.position.y = Math.sin(t * 1.15) * 0.055 + 0.04;
+
+  const goalRX = targetRX + dragOffsetX;
+  const goalRY = targetRY + dragOffsetY;
+  curRX += (goalRX - curRX) * 0.075;
+  curRY += (goalRY - curRY) * 0.075;
+  tabletGroup.rotation.set(curRX, curRY, BASE_RZ + Math.sin(t * 0.7) * 0.012);
+
+  // Auto-cycle meditative sheet flight
+  if (t >= nextAutoFlight && !flightActive) {
+    triggerFlight(t);
+    nextAutoFlight = t + 6.2;
+  }
+
+  // Update 3D curling paper flight
+  if (flightActive) {
+    const u = Math.min(1, (t - flightStart) / FLIGHT_DURATION);
+    // Ease out cubic
+    const ease = 1 - Math.pow(1 - u, 3);
+    const pt = flightCurve.getPoint(ease);
+    flyingSheet.position.copy(pt);
+    flyingSheet.rotation.set(
+      (1 - ease) * 0.55,
+      (1 - ease) * -0.75,
+      (1 - ease) * -0.32
+    );
+    const sc = 0.65 + 0.35 * ease;
+    flyingSheet.scale.set(sc, sc, 1);
+    deformSheet(ease, t);
+
+    // Fade in smoothly, dissolve right into the glass on touchdown
+    if (u < 0.14) sheetMat.opacity = (u / 0.14) * 0.95;
+    else if (u > 0.88) sheetMat.opacity = Math.max(0, (1 - u) / 0.12) * 0.95;
+    else sheetMat.opacity = 0.95;
+
+    // Ink particle ribbon trails the sheet
+    pMat.opacity = Math.sin(u * Math.PI) * 0.72;
+    const pAttr = pGeo.attributes.position;
+    for (let i = 0; i < PARTICLE_COUNT; i++) {
+      const d = pData[i];
+      const pu = Math.max(0, Math.min(1, ease - d.t * 0.28));
+      const baseP = flightCurve.getPoint(pu);
+      pAttr.setXYZ(
+        i,
+        baseP.x + Math.sin(t * 3 + d.seed) * d.spread * (1 - pu),
+        baseP.y + Math.cos(t * 2.6 + d.seed) * d.spread * (1 - pu),
+        baseP.z + Math.sin(t * 2.2 + d.seed * 2) * d.spread * 0.6
+      );
+    }
+    pAttr.needsUpdate = true;
+
+    // Magnetic Marker Plus subtle sympathetic hover on touchdown
+    markerGroup.position.x = W / 2 + 0.062 + Math.sin(u * Math.PI) * 0.028;
+
+    // Touchdown → authentic e-ink refresh + new page
+    if (u >= 0.86 && !landedTriggered) {
+      landedTriggered = true;
+      pageIndex = (pageIndex + 1) % 3;
+      strokeProgress = 0;
+      eInkFlashEnd = t + 0.36;
+    }
+    if (u >= 1) {
+      flightActive = false;
+      sheetMat.opacity = 0;
+      pMat.opacity = 0;
+      markerGroup.position.x = W / 2 + 0.062;
+    }
+  }
+
+  // Authentic e-ink refresh flicker + animated stylus stroke redraw
+  if (t < eInkFlashEnd || strokeProgress < 1) {
+    let flash = 0;
+    if (t < eInkFlashEnd) {
+      const rem = (eInkFlashEnd - t) / 0.36;
+      flash = rem > 0.55 ? 0.85 : (rem > 0.25 ? 0.2 : 0);
+    } else {
+      strokeProgress = Math.min(1, strokeProgress + 0.022);
+    }
+    renderEInkPage(pageIndex, strokeProgress, flash);
+  }
+
+  renderer.render(scene, camera);
+}
+
+animate();
+</script>
+</body>
+</html>
